@@ -13,6 +13,7 @@ The purpose is to verify that:
 - the plugin installs correctly in Claude Code
 - text commands work in a real Claude session
 - hook-driven state changes update BuddyHub state
+- Buddy identity is read from a real Claude source rather than invented by BuddyHub
 - the optional status line can be connected manually
 - BuddyHub can be paused, resumed, disabled, and uninstalled safely
 
@@ -70,9 +71,9 @@ Test flow:
 Expected output pattern:
 
 ```text
-Buddy: Buddy | idle
-Buddy: Buddy | reading | buddyhub
-Buddy: paused
+Crumpet | blob | idle
+Crumpet | blob | reading | buddyhub
+identity unavailable | paused
 ```
 
 ## 6. Core Smoke Tests
@@ -113,6 +114,9 @@ Verify:
 - richer text detail view is shown
 - quick actions are shown
 - identity section degrades gracefully when unavailable
+- Buddy name/species match the current Claude Buddy source when available
+- no fabricated rarity, shiny, hat, eye, or stats are shown when unavailable
+- no generic Buddy body is presented as the user's actual Buddy
 
 ### 6.4 Lifecycle controls
 
@@ -187,6 +191,15 @@ Verify:
 
 - inactive session no longer keeps driving current Buddy state
 - state falls back safely to `idle` when appropriate
+
+### 7.6 Identity source path
+
+Verify in a real Claude Code session:
+
+- BuddyHub reads the current Buddy identity from a real Claude source such as transcript attachment metadata when available
+- displayed `name/species` match the current Claude Buddy
+- fields not present in the source remain `unknown` or `unavailable`
+- reverse-engineered schema fields are not shown as if they were confirmed user values
 
 ## 8. Safety Tests
 

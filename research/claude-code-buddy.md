@@ -386,6 +386,52 @@ Why it matters:
 Confidence: `Local runtime`
 Source: [/Users/tvwoo/.claude/pet/pet.py](/Users/tvwoo/.claude/pet/pet.py)
 
+## Local Runtime Evidence: Claude Transcript Buddy Identity
+
+### Transcript attachment source
+
+Claude session transcripts on this machine contain a `companion_intro` attachment.
+
+Observed attachment shape:
+
+```json
+{"type":"companion_intro","name":"Crumpet","species":"blob"}
+```
+
+Observed fields confirmed locally so far:
+
+- `name`
+- `species`
+
+Observed example paths:
+
+- [/Users/tvwoo/.claude/projects/-Users-tvwoo-Projects-buddyhub/fcd69059-d2d2-46e3-b049-9f91753d762f.jsonl](/Users/tvwoo/.claude/projects/-Users-tvwoo-Projects-buddyhub/fcd69059-d2d2-46e3-b049-9f91753d762f.jsonl)
+- [/Users/tvwoo/.claude/projects/-Users-tvwoo/af3ef4ed-784d-418a-aef1-2649f3aa942a.jsonl](/Users/tvwoo/.claude/projects/-Users-tvwoo/af3ef4ed-784d-418a-aef1-2649f3aa942a.jsonl)
+
+Why it matters:
+
+- BuddyHub can read a real current-user Buddy identity source today
+- BuddyHub should build enhancement on top of this source instead of substituting a generic Buddy
+
+Confidence: `Local runtime`
+
+### Important boundary
+
+The transcript attachment source currently confirms `name` and `species`, but this research pass has not yet confirmed a stable local runtime source for:
+
+- `rarity`
+- `shiny`
+- `hat`
+- `eye`
+- `stats`
+
+Why it matters:
+
+- reverse-engineered schema and runtime availability are different things
+- BuddyHub should use reverse-engineered schema as a compatibility map, not as permission to fabricate missing user values
+
+Confidence: `Local runtime` for the observed transcript shape, `Inference` for the product rule derived from it
+
 ## Product Implications for BuddyHub
 
 ### What is safe to build first
@@ -403,7 +449,7 @@ Confidence: `Inference`
 
 Recommended V1 definition:
 
-`A reactive Claude companion that visibly mirrors Claude Code's current working state.`
+`A reactive Claude companion that enhances the user's current Claude Buddy and visibly mirrors Claude Code's current working state.`
 
 This can be built before:
 
@@ -422,6 +468,7 @@ Do not assume the following until directly confirmed:
 - stable access to official Buddy species or stat data from the Claude runtime
 - a documented third-party Buddy UI injection API
 - official support for rendering a plugin's custom companion inside Claude's exact native Buddy slot
+- permission to fabricate missing Buddy appearance or identity fields from reverse-engineered defaults
 
 Confidence: `Inference`
 

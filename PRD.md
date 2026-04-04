@@ -9,7 +9,7 @@
 
 BuddyHub 是一个面向 Claude Code 的反应式 Buddy 插件。
 
-它安装后会以低干扰的文本 UI 显示 Buddy 状态，并根据 Claude Code 的工作状态切换文案；同时它必须支持开启、关闭、安全卸载，并且不能影响用户正常使用 Claude Code。
+它安装后会以低干扰的文本 UI 显示用户当前 Claude Buddy 的状态，并在不替换、不伪造 Buddy 身份的前提下，根据 Claude Code 的工作状态切换文案；同时它必须支持开启、关闭、安全卸载，并且不能影响用户正常使用 Claude Code。
 
 ## 2. 背景
 
@@ -48,11 +48,12 @@ Claude Code 已公开支持：
 ### 4.1 核心目标
 
 1. 用户可以通过 Claude Code 的官方插件分发机制安装 BuddyHub。
-2. 安装后用户可以通过状态栏和命令看到一个状态驱动的 Buddy 文本层。
+2. 安装后用户可以通过状态栏和命令看到一个建立在当前 Claude Buddy 之上的状态驱动文本层。
 3. BuddyHub 必须支持显式开启和关闭。
 4. BuddyHub 必须支持安全、一键式卸载路径。
 5. BuddyHub 不能阻塞、破坏或显著拖慢 Claude Code 的正常工作。
 6. 第一版尽量不依赖远程服务，默认本地优先。
+7. BuddyHub 不得用自定义的通用 Buddy 替代用户当前 Claude Buddy。
 
 ### 4.2 非目标
 
@@ -105,6 +106,18 @@ V1 默认不要求：
 - 云数据库
 - 独立服务器
 
+### 5.5 Buddy 身份保真优先
+
+BuddyHub 的核心对象是 `用户当前的 Claude Buddy`，不是 BuddyHub 自己定义的一只宠物。
+
+要求：
+
+- 必须优先读取用户当前 Buddy 的真实身份信息
+- 增强应建立在真实 Buddy 之上，而不是替换成 BuddyHub 自定义形态
+- 未验证的字段必须明确标记为 `unknown` 或 `unavailable`
+- 不能把 reverse-engineered schema 当作当前用户真实值直接填充
+- 不能用通用 ASCII 宠物骨架冒充用户 Buddy 的原始外形
+
 ## 6. 目标用户
 
 ### 6.1 主要用户
@@ -124,7 +137,7 @@ V1 默认不要求：
 
 BuddyHub V1 是一个 `状态驱动的 Claude Buddy 可视化插件`。
 
-它由以下四层组成：
+它由以下五层组成：
 
 1. `安装层`
 通过自建 marketplace 完成安装。
@@ -132,10 +145,13 @@ BuddyHub V1 是一个 `状态驱动的 Claude Buddy 可视化插件`。
 2. `状态层`
 通过 Claude Code hooks 和本地运行信息感知 Claude 的当前工作状态。
 
-3. `展示层`
-通过 status line、状态命令和详情命令显示当前状态。
+3. `身份层`
+读取用户当前 Claude Buddy 的真实身份信息，并记录字段来源与可信度。
 
-4. `控制层`
+4. `展示层`
+通过 status line、状态命令和详情命令显示当前状态与已验证身份信息。
+
+5. `控制层`
 支持开启、关闭、恢复、状态查看和安全卸载。
 
 ## 8. V1 UI 定义
@@ -155,14 +171,20 @@ V1 的主 UI 是 `TUI-first`。
 
 默认显示：
 
-- Buddy 名称
+- 已验证的 Buddy 名称
+- 已验证的 Buddy 物种（如可用）
 - 当前状态
 - 当前项目名（如可用）
 
 例如：
 
-- `Buddy: Buddy | thinking | buddyhub`
-- `Buddy: Buddy | waiting`
+- `Crumpet | blob | thinking | buddyhub`
+- `Crumpet | thinking`
+
+如果身份字段暂时不可用：
+
+- 必须明确说明 `identity unavailable`
+- 不得回退成 BuddyHub 自定义的宠物名称或物种
 
 ### 8.3 详情视图
 
@@ -170,7 +192,8 @@ V1 的主 UI 是 `TUI-first`。
 
 V1 详情视图至少包含：
 
-- Buddy 名称
+- 已验证的 Buddy 名称
+- 已验证的 Buddy identity 字段及来源
 - 当前状态
 - 最近一次状态变更时间
 - 当前项目信息
@@ -178,6 +201,12 @@ V1 详情视图至少包含：
 - 快捷操作入口
 
 V1 可以先不做完整属性面板，但要为后续 Buddy 属性展示预留位置。
+
+详情视图必须遵守：
+
+- 如果只确认到 `name/species`，就只显示这两个字段
+- 如果 `rarity/shiny/hat/eye/stats` 没有真实来源，就不能显示伪造值
+- 通用状态图标可以存在，但必须被表述为 `BuddyHub 状态提示`，不能被表述为用户 Buddy 的原始外形
 
 ### 8.4 可选状态栏同步
 
@@ -195,6 +224,7 @@ V1 不承诺：
 - 把 Buddy 直接嵌入 Claude Code 的原生内部 UI 插槽
 - 接管 Claude Code 的正文布局
 - 修改 Claude Code 的核心渲染逻辑
+- 在没有真实来源时伪造用户 Buddy 的外形、属性或稀有度
 
 ## 9. 状态模型
 
@@ -232,7 +262,30 @@ V1 的 Buddy 可视状态至少包含：
 
 这些状态来自对 Claude Code 公开 hook 事件和本地运行信号的映射。
 
-### 9.3 显示规则
+### 9.3 Buddy 身份字段
+
+BuddyHub V1 必须区分：
+
+- `工作状态字段`：由 hooks 和运行信号驱动
+- `Buddy 身份字段`：由用户当前 Claude Buddy 的真实来源驱动
+
+Buddy 身份字段示例：
+
+- `name`
+- `species`
+- `rarity`
+- `shiny`
+- `hat`
+- `eye`
+- `stats`
+
+规则：
+
+- 只有存在真实来源的字段才能进入显示层
+- reverse-engineered schema 只用于兼容性理解，不能直接作为用户值
+- 字段必须记录来源，例如 transcript attachment、local runtime、reverse-engineered reference
+
+### 9.4 显示规则
 
 - 默认优先显示 Claude 当前工作状态
 - 如果 BuddyHub 被暂停或禁用，UI 显示为 `paused` 或不显示
@@ -342,6 +395,13 @@ BuddyHub 必须清楚说明：
 - 哪些数据是缓存
 - 哪些数据会在卸载时删除
 
+BuddyHub 还必须区分：
+
+- BuddyHub 自己写入的运行时数据
+- Claude 自己拥有、BuddyHub 只读取的 Buddy 身份来源
+
+BuddyHub 不能删除或篡改 Claude 自身的 Buddy 身份数据源。
+
 ## 12. 技术方案要求
 
 ### 12.1 分发
@@ -358,6 +418,7 @@ V1 的最小可行组成：
 
 - plugin commands 或 skills
 - hooks
+- Buddy identity reader
 - 本地状态文件
 - 可选 status line 脚本
 - 详细文本状态视图
@@ -394,10 +455,10 @@ V1 命令设计应围绕“查看状态”和“控制生命周期”。
 说明：
 
 - `help`：展示命令和说明
-- `status`：展示 Buddy 当前状态、启用状态和关键配置
+- `status`：展示 Buddy 当前状态、已验证身份字段、启用状态和关键配置
 - `pause`：暂停 BuddyHub 自动运行
 - `resume`：恢复 BuddyHub 自动运行
-- `open`：打开 Buddy 详细文本视图
+- `open`：打开 Buddy 详细文本视图，并展示真实来源的 Buddy 字段
 - `doctor`：检查运行状态、配置和常见问题
 
 卸载可以是产品级操作，但在 PRD 阶段不假定具体命令名，避免写入未验证的平台 API。
@@ -409,6 +470,7 @@ V1 命令设计应围绕“查看状态”和“控制生命周期”。
 - 自建 marketplace 分发
 - 可安装 BuddyHub 插件
 - 状态驱动的文本 UI
+- 用户当前 Buddy 身份读取
 - `/buddyhub:status` 紧凑状态视图
 - `/buddyhub:open` 详细文本视图
 - 可选 status line 同步

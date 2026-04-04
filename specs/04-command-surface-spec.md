@@ -46,6 +46,7 @@ Must show:
 
 - what BuddyHub is
 - current BuddyHub state summary
+- Buddy identity preservation rule
 - the available commands
 - where the status line script lives
 
@@ -55,6 +56,7 @@ Must show a compact text summary:
 
 - lifecycle status
 - current Buddy state
+- verified Buddy name/species when available
 - status line requested mode
 - active session
 - current project
@@ -75,6 +77,11 @@ It should show:
 - last event and update time
 - quick actions
 - verified identity fields only when available
+
+It must not:
+
+- invent rarity, shiny, hat, eye, or stats
+- render a generic Buddy body as if it were the user's Buddy
 
 ## 5. Lifecycle Commands
 
@@ -124,3 +131,4 @@ This spec is satisfied when:
 3. The user can open a richer text detail view via `/buddyhub:open`.
 4. The user can pause, resume, disable, and uninstall BuddyHub.
 5. The user can diagnose BuddyHub without any GUI dependency.
+6. Command output never substitutes an invented Buddy identity for the user's current Buddy.

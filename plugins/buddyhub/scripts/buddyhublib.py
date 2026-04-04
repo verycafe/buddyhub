@@ -73,101 +73,57 @@ BUDDY_EXPRESSIONS = {
     "idle": {
         "headline": "idle",
         "subtitle": "resting quietly",
-        "eyes": "o o",
-        "accent": "^",
-        "mouth": "---",
-        "paw": "v v",
-        "mini": "(o o)",
+        "token": "idle",
     },
     "thinking": {
         "headline": "thinking...",
         "subtitle": "working through your request",
-        "eyes": "o .",
-        "accent": ".",
-        "mouth": "...",
-        "paw": "v v",
-        "mini": "(o.)",
+        "token": "think",
     },
     "reading": {
         "headline": "reading",
         "subtitle": "looking through files",
-        "eyes": "O O",
-        "accent": "=",
-        "mouth": "[=]",
-        "paw": "v v",
-        "mini": "(OO)",
+        "token": "read",
     },
     "coding": {
         "headline": "coding",
         "subtitle": "making changes",
-        "eyes": "+ +",
-        "accent": "+",
-        "mouth": "{ }",
-        "paw": "\\ /",
-        "mini": "(++)",
+        "token": "edit",
     },
     "running": {
         "headline": "running",
         "subtitle": "executing commands",
-        "eyes": "> <",
-        "accent": "!",
-        "mouth": "_|_",
-        "paw": "/ \\",
-        "mini": "(> <)",
+        "token": "run",
     },
     "browsing": {
         "headline": "browsing",
         "subtitle": "checking the web",
-        "eyes": "~ ~",
-        "accent": "~",
-        "mouth": "/_/",
-        "paw": "v v",
-        "mini": "(~~)",
+        "token": "web",
     },
     "waiting": {
         "headline": "waiting",
         "subtitle": "needs your input",
-        "eyes": "? ?",
-        "accent": "^",
-        "mouth": "---",
-        "paw": "v v",
-        "mini": "(? ?)",
+        "token": "wait",
     },
     "done": {
         "headline": "done",
         "subtitle": "finished this step",
-        "eyes": "^ ^",
-        "accent": "^",
-        "mouth": "\\_/",
-        "paw": "\\ /",
-        "mini": "(^ ^)",
+        "token": "done",
     },
     "error": {
         "headline": "error",
         "subtitle": "something went wrong",
-        "eyes": "x x",
-        "accent": "!",
-        "mouth": "___",
-        "paw": "v v",
-        "mini": "(x x)",
+        "token": "err",
     },
     "paused": {
         "headline": "paused",
         "subtitle": "taking a short nap",
-        "eyes": "- -",
-        "accent": "z",
-        "mouth": "---",
-        "paw": "v v",
-        "mini": "(- -)",
+        "token": "pause",
     },
     "disabled": {
         "headline": "disabled",
         "subtitle": "off duty",
-        "eyes": "- -",
-        "accent": ".",
-        "mouth": "___",
-        "paw": "v v",
-        "mini": "(- -)",
+        "token": "off",
     },
 }
 
@@ -239,10 +195,11 @@ def default_runtime() -> dict[str, Any]:
         "last_event": None,
         "last_update_ts": 0.0,
         "statusline_enabled": False,
-        "buddy_name": "Buddy",
+        "buddy_name": None,
         "identity": {
             "available": False,
             "source": None,
+            "name": None,
             "species": None,
             "rarity": None,
             "shiny": None
@@ -400,6 +357,87 @@ def recompute_runtime_state(runtime: dict[str, Any], sessions: dict[str, Any]) -
         runtime["current_state"] = "idle"
 
 
+def empty_identity() -> dict[str, Any]:
+    return {
+        "available": False,
+        "source": None,
+        "name": None,
+        "species": None,
+        "rarity": None,
+        "shiny": None,
+    }
+
+
+def read_companion_intro(transcript_path: str | None) -> dict[str, Any] | None:
+    if not transcript_path:
+        return None
+
+    path = Path(transcript_path)
+    if not path.exists() or not path.is_file():
+        return None
+
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            for raw_line in handle:
+                raw_line = raw_line.strip()
+                if not raw_line:
+                    continue
+                try:
+                    record = json.loads(raw_line)
+                except json.JSONDecodeError:
+                    continue
+                if record.get("type") != "attachment":
+                    continue
+                attachment = record.get("attachment") or {}
+                if attachment.get("type") != "companion_intro":
+                    continue
+                name = attachment.get("name")
+                species = attachment.get("species")
+                if not (name or species):
+                    continue
+                return {
+                    "available": True,
+                    "source": "transcript:companion_intro",
+                    "name": name,
+                    "species": species,
+                    "rarity": None,
+                    "shiny": None,
+                }
+    except OSError:
+        return None
+
+    return None
+
+
+def resolve_buddy_identity(runtime: dict[str, Any], sessions: dict[str, Any]) -> dict[str, Any]:
+    session_map = sessions.get("sessions", {})
+    candidate_sessions: list[dict[str, Any]] = []
+
+    active_session_id = runtime.get("active_session_id")
+    if active_session_id and active_session_id in session_map:
+        candidate_sessions.append(session_map[active_session_id])
+
+    remaining_sessions = [
+        session
+        for session in session_map.values()
+        if session.get("session_id") != active_session_id
+    ]
+    remaining_sessions.sort(key=lambda item: float(item.get("last_update_ts", 0)), reverse=True)
+    candidate_sessions.extend(remaining_sessions)
+
+    seen_paths: set[str] = set()
+    for session in candidate_sessions:
+        transcript_path = session.get("transcript_path")
+        if not transcript_path or transcript_path in seen_paths:
+            continue
+        seen_paths.add(transcript_path)
+        identity = read_companion_intro(transcript_path)
+        if identity:
+            return identity
+
+    return empty_identity()
+
+
 def record_hook_event(event_name: str, payload: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
     ensure_ownership_manifest()
     with state_lock():
@@ -438,6 +476,8 @@ def record_hook_event(event_name: str, payload: dict[str, Any]) -> tuple[dict[st
         if event_name == "SessionStart":
             runtime["lifecycle_state"] = runtime.get("lifecycle_state", "enabled")
         recompute_runtime_state(runtime, sessions)
+        runtime["identity"] = resolve_buddy_identity(runtime, sessions)
+        runtime["buddy_name"] = runtime["identity"].get("name")
         save_sessions(sessions)
         save_runtime(runtime)
         return runtime, sessions
@@ -528,14 +568,27 @@ def render_buddy_bubble(runtime: dict[str, Any], *, compact: bool = False) -> li
     return lines
 
 
-def render_buddy_sprite(runtime: dict[str, Any]) -> list[str]:
-    expression = buddy_expression(runtime)
+def render_identity_card(runtime: dict[str, Any], *, compact: bool = False) -> list[str]:
+    identity = runtime.get("identity", {})
+    if identity.get("available"):
+        details = [
+            identity.get("name") or "Current Claude Buddy",
+            f"species: {identity.get('species') or 'unknown'}",
+        ]
+        if not compact:
+            details.append("verified: companion_intro")
+    else:
+        details = [
+            "Current Claude Buddy",
+            "identity unavailable",
+            "waiting for companion_intro",
+        ]
+
+    panel_width = max(len(line) for line in details)
     return [
-        r"        /\___/\\",
-        f"       ( {expression['eyes']:^5} )",
-        f"       /  {expression['accent']:^3}  \\",
-        f"      /  {expression['mouth']:^5}  \\",
-        f"      \\__ {expression['paw']:^3} __/",
+        f"      +{'-' * (panel_width + 2)}+",
+        *[f"      | {line:<{panel_width}} |" for line in details],
+        f"      +{'-' * (panel_width + 2)}+",
     ]
 
 
@@ -544,28 +597,27 @@ def render_buddy_scene(info: dict[str, Any], *, compact: bool = False) -> str:
     active_session = info["active_session"] or {}
     identity = runtime.get("identity", {})
     state = display_state(runtime)
-    expression = buddy_expression(runtime)
-    name = runtime.get("buddy_name", "Buddy")
+    name = identity.get("name") or "Current Claude Buddy"
     project = active_session.get("project_name")
     last_event = runtime.get("last_event") or "none"
     lifecycle = runtime.get("lifecycle_state", "enabled")
-    identity_line = (
-        "Identity: "
-        f"`{identity.get('species') or 'unknown'}` | "
-        f"`{identity.get('rarity') or 'unknown'}`"
-        if identity.get("available")
-        else "Identity sync is not available in V1."
-    )
+    if identity.get("available"):
+        identity_line = (
+            f"Identity source: `{identity.get('source')}`\n"
+            "Unverified Buddy fields remain hidden in V1."
+        )
+    else:
+        identity_line = "Identity source not available yet."
 
     lines = [
         "# BuddyHub",
         "",
         *render_buddy_bubble(runtime, compact=compact),
         "",
-        *render_buddy_sprite(runtime),
+        *render_identity_card(runtime, compact=compact),
         "",
-        f"{name}",
-        f"`{state}` | `{lifecycle}`",
+        f"{name} is `{state}`.",
+        f"Lifecycle: `{lifecycle}`",
     ]
 
     if project:
@@ -604,10 +656,13 @@ def render_buddy_statusline(info: dict[str, Any]) -> str:
     runtime = info["runtime"]
     active_session = info["active_session"] or {}
     state = display_state(runtime)
-    expression = buddy_expression(runtime)
+    identity = runtime.get("identity", {})
     project = active_session.get("project_name")
     suffix = f" | {project}" if project else ""
-    return f"Buddy {expression['mini']} {state}{suffix}"
+    subject = identity.get("name") or "Claude Buddy"
+    if identity.get("species"):
+        subject = f"{subject} | {identity['species']}"
+    return f"{subject} | {state}{suffix}"
 
 
 def snapshot() -> dict[str, Any]:
@@ -616,6 +671,8 @@ def snapshot() -> dict[str, Any]:
         runtime = load_runtime()
         sessions = load_sessions()
         recompute_runtime_state(runtime, sessions)
+        runtime["identity"] = resolve_buddy_identity(runtime, sessions)
+        runtime["buddy_name"] = runtime["identity"].get("name")
         save_sessions(sessions)
         save_runtime(runtime)
         active_session_id = runtime.get("active_session_id")
@@ -672,6 +729,7 @@ def human_status_report() -> str:
 
 def diagnose() -> dict[str, Any]:
     info = snapshot()
+    identity = info["runtime"].get("identity", {})
     diagnostics = {
         "ui_mode": "tui-first",
         "lifecycle_state": info["runtime"].get("lifecycle_state"),
@@ -685,6 +743,10 @@ def diagnose() -> dict[str, Any]:
         ),
         "active_session_id": info["runtime"].get("active_session_id"),
         "active_project": (info["active_session"] or {}).get("project_name"),
+        "identity_available": identity.get("available", False),
+        "identity_source": identity.get("source"),
+        "buddy_name": identity.get("name"),
+        "buddy_species": identity.get("species"),
     }
     diagnostics["claude_cli_available"] = shutil_which("claude") is not None
     return diagnostics

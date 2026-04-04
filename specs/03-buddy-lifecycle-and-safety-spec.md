@@ -209,6 +209,13 @@ BuddyHub must document:
 - which ones are safe to delete
 - which ones are required to preserve user state
 
+BuddyHub must also distinguish:
+
+- BuddyHub-owned runtime data
+- Claude-owned Buddy identity or transcript data that BuddyHub only reads
+
+BuddyHub must not delete or mutate Claude-owned Buddy identity sources during normal operation or uninstall.
+
 V1 must not hide essential uninstall knowledge in source code only.
 
 ## 12. Acceptance Criteria

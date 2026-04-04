@@ -4,6 +4,8 @@
 
 BuddyHub 是一个面向 Claude Code 的反应式 Buddy 插件。
 
+BuddyHub 的目标是增强用户当前的 Claude Buddy，而不是用 BuddyHub 自己定义的一只宠物替换它。
+
 V1 采用 `TUI-first` 方案：
 
 - 基于 hooks 的状态追踪
@@ -11,6 +13,12 @@ V1 采用 `TUI-first` 方案：
 - `/buddyhub:open` 详细文本视图
 - 可选的 Claude Code 状态栏集成
 - 安全的暂停、恢复、禁用、卸载流程
+
+身份规则：
+
+- 可以显示已验证的 Buddy 身份字段
+- 未确认的 Buddy 身份字段必须保持 unavailable
+- 不能用一个通用 Buddy 外形冒充用户当前 Buddy
 
 BuddyHub 不要求：
 

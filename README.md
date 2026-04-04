@@ -4,6 +4,8 @@
 
 BuddyHub is a reactive Buddy plugin for Claude Code.
 
+BuddyHub is intended to enhance the user's current Claude Buddy, not replace it with a BuddyHub-defined pet.
+
 V1 is `TUI-first`:
 
 - hook-driven state tracking
@@ -11,6 +13,12 @@ V1 is `TUI-first`:
 - `/buddyhub:open` detailed text view
 - optional Claude Code status line integration
 - safe pause, resume, disable, and uninstall flows
+
+Identity rule:
+
+- verified Buddy identity fields may be shown
+- unavailable Buddy identity fields must stay unavailable
+- BuddyHub must not fabricate a generic Buddy appearance and present it as the user's Buddy
 
 BuddyHub does not require:
 

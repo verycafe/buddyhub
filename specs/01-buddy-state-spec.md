@@ -30,6 +30,7 @@ The model must be:
 - easy to reason about
 - robust against partial failures
 - independent from undocumented Claude internals
+- explicit about the difference between runtime state and Buddy identity
 
 ## 3. Inputs
 
@@ -38,6 +39,7 @@ BuddyHub V1 may use the following inputs:
 - Claude Code hook events
 - hook event metadata
 - Claude session identity metadata when available
+- Claude transcript attachment metadata such as `companion_intro` when available
 - workspace or project identity when available
 - local state files written by BuddyHub
 - optional status line context
@@ -88,6 +90,39 @@ Why this is required:
 
 - multiple Claude Code sessions may coexist
 - a single global last-writer state is not reliable enough
+
+## 4.3 Identity State Separation
+
+BuddyHub V1 must treat `Buddy identity` and `Buddy runtime state` as separate data domains.
+
+`Buddy runtime state` includes:
+
+- idle
+- thinking
+- reading
+- coding
+- running
+- browsing
+- waiting
+- done
+- error
+
+`Buddy identity` includes fields such as:
+
+- name
+- species
+- rarity
+- shiny
+- hat
+- eye
+- stats
+
+Rules:
+
+- runtime state may be inferred from Claude activity
+- identity fields must only be populated from a real source tied to the current user Buddy
+- reverse-engineered schema is not itself a valid runtime source
+- unavailable identity fields must stay unavailable
 
 ## 5. Claude Runtime States
 
@@ -219,6 +254,8 @@ Minimum persisted fields:
 - `session_id` when available
 - workspace or project identity when available
 - active-session pointer or equivalent
+- verified Buddy identity fields when available
+- provenance for each Buddy identity field
 
 Persistence requirements:
 
@@ -226,6 +263,21 @@ Persistence requirements:
 - writes must be low-cost
 - corrupt state must fail open
 - per-session records must not overwrite each other blindly
+
+### 8.1 Identity provenance requirement
+
+For every persisted Buddy identity field, BuddyHub should retain enough metadata to answer:
+
+- what field was read
+- where it came from
+- how trustworthy it is
+
+Minimum source labels may include:
+
+- `transcript_attachment`
+- `local_runtime`
+- `manual_override`
+- `unknown`
 
 ## 9. Failure Behavior
 
@@ -260,6 +312,14 @@ If one BuddyHub UI surface is unavailable:
 - Claude Code must continue unaffected
 - another text surface such as `/buddyhub:status` or `/buddyhub:open` must still work if possible
 
+### 9.5 Identity source unavailable
+
+If BuddyHub cannot read the current user's Buddy identity:
+
+- it may continue to show runtime state
+- it must explicitly mark identity as unavailable
+- it must not substitute a generic Buddy body, species, rarity, or name as if it were the user's Buddy
+
 ## 10. Acceptance Criteria
 
 This spec is satisfied when:
@@ -271,3 +331,4 @@ This spec is satisfied when:
 5. Idle fallback exists and works predictably.
 6. Multiple concurrent sessions do not blindly overwrite one another's state.
 7. Session start, end, and stale-session cleanup rules are defined and recover gracefully.
+8. Buddy identity and Buddy runtime state are handled as separate data domains.
