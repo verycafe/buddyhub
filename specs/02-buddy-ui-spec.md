@@ -1,62 +1,67 @@
 # Buddy UI Spec
 
-- Status: Draft v0.2
+- Status: Draft v0.3
 - Derived from: [PRD.md](/Users/tvwoo/Projects/buddyhub/PRD.md)
 
 ## 1. Purpose
 
-Define BuddyHub V1 UI surfaces and interaction behavior.
+Define BuddyHub UI surfaces and interaction behavior.
 
-BuddyHub V1 is `TUI-first`.
+BuddyHub's primary product target is the official Claude Code Buddy already shown in the bottom-right UI.
 
 This spec covers:
 
-- Claude Code status line output
-- text detail view
-- compact status output
-- command-driven control surfaces
+- the official native Buddy surface
+- supporting diagnostic text views
+- optional status line output
+- command-driven lifecycle and diagnostic surfaces
 
 This spec does not cover:
 
 - external GUI windows
 - legacy desktop visual modes
 - terminal-specific graphics protocols
-- internal Claude Code UI injection
+- surrogate Buddy products that replace the official native Buddy
 
 ## 2. UI Strategy
 
-BuddyHub V1 must work across different terminal products without depending on terminal-specific GUI behavior.
+BuddyHub must enhance the user's existing official Buddy, not create a second Buddy that competes with it.
 
-Therefore the primary UI surfaces are:
+Therefore the UI hierarchy is:
 
-1. `status line`
-2. `text detail view`
-3. `compact status output`
+1. `official native Buddy in Claude Code's bottom-right UI`
+2. `diagnostic text detail view`
+3. `diagnostic compact status output`
+4. `optional status line`
 
-All of them must work with ordinary text rendering.
-
-BuddyHub may use generic state indicators, but it must not present a fabricated surrogate creature as if it were the user's actual Buddy.
+Text surfaces may exist for debugging and verification, but they do not satisfy the product goal by themselves.
 
 ## 3. Supported UI Surfaces
 
-### 3.1 Status line
+### 3.1 Official native Buddy surface
 
-The status line is the default ambient UI surface.
+The primary BuddyHub UI surface is the official Claude Code Buddy that Claude Code renders in the bottom-right UI.
 
 Requirements:
 
-- one concise line
-- low interruption
-- no cursor tricks
-- no terminal-specific graphics requirements
+- BuddyHub must enhance this existing native surface rather than replacing it
+- the enhanced state must be visibly attached to the user's real Buddy identity
+- BuddyHub must not render a second surrogate Buddy and call that the product
+- success criteria require visible native Buddy dynamics, not only text output
 
-Example:
+This spec does not yet assume a confirmed technical control path to the native surface.
 
-- `Crumpet | blob | thinking | repo-name`
+Until such a path is confirmed:
 
-### 3.2 Text detail view
+- any text surfaces are diagnostic only
+- the product is still incomplete against the main UI goal
+- the repository should explicitly describe this as a native-control-path blocker, not as a finished MVP
+
+### 3.2 Diagnostic text detail view
 
 The text detail view is opened via `/buddyhub:open`.
+
+It is a supporting diagnostic surface, not the primary product UI.
 
 It must show:
 
@@ -68,6 +73,7 @@ It must show:
 - last event
 - last update time
 - quick actions
+- current native-control-path status when known
 
 If verified Buddy identity exists, it may additionally show:
 
@@ -84,9 +90,11 @@ The detail view must also follow these appearance rules:
 - if only `name/species` are verified, the UI must stop there
 - if `hat/eye/rarity/shiny/stats` are unverified, the UI must not synthesize them
 
-### 3.3 Compact status output
+### 3.3 Diagnostic compact status output
 
 The compact status output is `/buddyhub:status`.
+
+It is a supporting diagnostic surface, not the primary product UI.
 
 It should stay shorter than the detail view and focus on:
 
@@ -96,21 +104,29 @@ It should stay shorter than the detail view and focus on:
 - status line requested mode
 - active session/project
 - last update time
+- whether the official native Buddy enhancement path is confirmed, experimental, or unavailable
+
+### 3.4 Optional status line
+
+Status line output is optional and diagnostic.
+
+It may summarize state, but it must not be treated as the core Buddy experience.
 
 ## 4. Control Rules
 
-V1 UI must respect these rules:
+BuddyHub UI must respect these rules:
 
-- the user can use BuddyHub without any GUI surface
-- the user can access all primary state through text commands
+- the user can inspect BuddyHub through text commands even while the native Buddy path is under development
+- text commands must help diagnose whether native Buddy enhancement is working
 - the user can request status line mode explicitly
 - UI output must degrade gracefully when optional integrations are not configured
+- no diagnostic surface may be presented as equivalent to native official Buddy enhancement
 
 ## 5. Terminal Compatibility
 
-BuddyHub V1 must assume users may run Claude Code in different terminal products.
+BuddyHub must assume users may run Claude Code in different terminal products.
 
-Therefore V1 must not require:
+Therefore supporting diagnostic surfaces must not require:
 
 - Ghostty-specific features
 - iTerm-specific features
@@ -118,15 +134,15 @@ Therefore V1 must not require:
 - tmux
 - external desktop automation
 
-The design target is:
+The design target for supporting diagnostic surfaces is:
 
-- if the terminal can render ordinary Claude Code text output, BuddyHub UI should still work
+- if the terminal can render ordinary Claude Code text output, BuddyHub diagnostics should still work
 
 ## 6. Status Line Sync Spec
 
 ### 6.1 Role
 
-Status line sync is the primary ambient Buddy surface in V1.
+Status line sync is a supporting diagnostic surface, not the primary Buddy experience.
 
 ### 6.2 Display rules
 
@@ -141,29 +157,36 @@ Status line output must:
 
 BuddyHub must provide a way to request status line mode and a way to turn that request off.
 
-V1 command surface:
+Command surface:
 
 - `/buddyhub:statusline-on`
 - `/buddyhub:statusline-off`
 
 ## 7. Explicit Non-Goals
 
-V1 UI does not guarantee:
+BuddyHub UI does not guarantee:
 
 - floating windows
-- embedded widgets
-- native Buddy graphics
+- a second Buddy UI as the shipped product
 - cross-terminal pixel rendering
 - invented Buddy appearance fallback
+
+BuddyHub must not redefine the product as a text Buddy if native official Buddy enhancement remains unresolved.
 
 ## 8. Acceptance Criteria
 
 This spec is satisfied when:
 
-1. BuddyHub can be used entirely through text UI.
-2. `/buddyhub:status` provides a compact current-state view.
-3. `/buddyhub:open` provides a richer text detail view.
-4. Status line output remains available as an optional ambient surface.
-5. No GUI surface is required to use BuddyHub.
-6. The UI strategy does not depend on a specific terminal product.
+1. BuddyHub visibly enhances the official Claude Code Buddy in the native bottom-right UI.
+2. Native Buddy dynamics are driven by verified Buddy identity and Claude activity state.
+3. `/buddyhub:status` provides a compact diagnostic current-state view.
+4. `/buddyhub:open` provides a richer diagnostic detail view.
+5. Status line output remains optional and secondary.
+6. The UI strategy does not depend on a specific terminal product for its diagnostic surfaces.
 7. The UI never replaces the user's Buddy identity with an invented generic Buddy.
+8. Text output alone does not count as meeting the primary UI requirement.
+
+Current blocker note:
+
+- as of 2026-04-04, no supported third-party plugin path has been confirmed for writing native `companionReaction`
+- therefore this spec remains blocked at the native-control layer even if diagnostic text views are working

@@ -18,9 +18,9 @@ Each spec should define:
 ## Current Specs
 
 - [01-buddy-state-spec.md](/Users/tvwoo/Projects/buddyhub/specs/01-buddy-state-spec.md): Claude state model, Buddy state model, mappings, and fallback behavior
-- [02-buddy-ui-spec.md](/Users/tvwoo/Projects/buddyhub/specs/02-buddy-ui-spec.md): TUI-first UI, detail view, compact status, and status line behavior
+- [02-buddy-ui-spec.md](/Users/tvwoo/Projects/buddyhub/specs/02-buddy-ui-spec.md): official native Buddy enhancement goal, plus diagnostic text/status surfaces
 - [03-buddy-lifecycle-and-safety-spec.md](/Users/tvwoo/Projects/buddyhub/specs/03-buddy-lifecycle-and-safety-spec.md): install, enable, pause, resume, uninstall, cleanup, and safety guarantees
-- [04-command-surface-spec.md](/Users/tvwoo/Projects/buddyhub/specs/04-command-surface-spec.md): user-facing command surface and lifecycle control commands
+- [04-command-surface-spec.md](/Users/tvwoo/Projects/buddyhub/specs/04-command-surface-spec.md): user-facing diagnostic and lifecycle command surface
 
 ## Relationship To Other Docs
 

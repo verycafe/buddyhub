@@ -2,15 +2,28 @@
 
 [中文说明](./README.zh-CN.md)
 
-BuddyHub is a reactive Buddy plugin for Claude Code.
+BuddyHub is a Buddy enhancement plugin for Claude Code.
 
 BuddyHub is intended to enhance the user's current Claude Buddy, not replace it with a BuddyHub-defined pet.
 
-V1 is `TUI-first`:
+Current product status:
+
+- BuddyHub can verify the current official Buddy identity
+- BuddyHub can track Claude-side runtime state
+- BuddyHub has not yet unlocked third-party native control of the official bottom-right Buddy
+
+Core product rule:
+
+- the real target is the official Claude Code Buddy already shown in the bottom-right UI
+- text commands and status-line output are diagnostic/supporting surfaces only
+- text output alone does not count as product completion
+
+Current repo state:
 
 - hook-driven state tracking
-- `/buddyhub:status` compact state view
-- `/buddyhub:open` detailed text view
+- verified Buddy identity reading
+- `/buddyhub:status` compact diagnostic view
+- `/buddyhub:open` detailed diagnostic view
 - optional Claude Code status line integration
 - safe pause, resume, disable, and uninstall flows
 
@@ -72,13 +85,15 @@ What is already in place:
 - command surface
 - hook-driven state runtime
 - local testing guide
+- diagnostic text/status surfaces
 
 What still needs real-world verification:
 
-- real Claude Code install in a logged-in session
-- real hook payload behavior inside Claude Code
+- a plugin-accessible control path to the official native Buddy
+- visible enhancement of the official bottom-right Buddy
+- real hook-to-native-Buddy state propagation
 - manual status line wiring
-- at least one cross-terminal smoke pass
+- at least one cross-terminal smoke pass for diagnostic surfaces
 
 ## License
 

@@ -127,6 +127,16 @@ BUDDY_EXPRESSIONS = {
     },
 }
 
+NATIVE_CONTROL_STATUS = {
+    "mode": "experimental",
+    "writable": False,
+    "field": "companionReaction",
+    "reason": (
+        "No supported third-party plugin path has been confirmed for writing the "
+        "official Buddy's native reaction state."
+    ),
+}
+
 
 def ensure_data_root() -> None:
     DATA_ROOT.mkdir(parents=True, exist_ok=True)
@@ -609,14 +619,18 @@ def render_buddy_scene(info: dict[str, Any], *, compact: bool = False) -> str:
     else:
         identity_line = "Identity source not available yet."
 
+    native_status = (
+        "Official Buddy native control is still experimental.\n"
+        f"`{NATIVE_CONTROL_STATUS['field']}` is not writable from a confirmed third-party plugin path yet."
+    )
+
     lines = [
         "# BuddyHub",
         "",
-        *render_buddy_bubble(runtime, compact=compact),
-        "",
         *render_identity_card(runtime, compact=compact),
         "",
-        f"{name} is `{state}`.",
+        f"Detected official Buddy: `{name}`",
+        f"Observed Buddy state: `{state}`",
         f"Lifecycle: `{lifecycle}`",
     ]
 
@@ -629,6 +643,7 @@ def render_buddy_scene(info: dict[str, Any], *, compact: bool = False) -> str:
 
     if not compact:
         lines.append(identity_line)
+        lines.append(native_status)
 
         if runtime.get("statusline_enabled", False):
             lines.append("Status line sync is on.")
@@ -646,6 +661,7 @@ def render_buddy_scene(info: dict[str, Any], *, compact: bool = False) -> str:
         lines.extend(
             [
                 identity_line,
+                native_status,
                 f"Status line sync: `{str(runtime.get('statusline_enabled', False)).lower()}`",
             ]
         )
@@ -721,6 +737,7 @@ def human_status_report() -> str:
         "Status line",
         "",
         "BuddyHub uses Claude Code text surfaces as the primary UI.",
+        "The official Buddy's native reaction path is still experimental from a third-party plugin.",
         "The optional status line script lives at:",
         f"- `{info['paths']['statusline_script']}`",
     ]
@@ -747,6 +764,10 @@ def diagnose() -> dict[str, Any]:
         "identity_source": identity.get("source"),
         "buddy_name": identity.get("name"),
         "buddy_species": identity.get("species"),
+        "native_control_mode": NATIVE_CONTROL_STATUS["mode"],
+        "native_control_writable": NATIVE_CONTROL_STATUS["writable"],
+        "native_control_field": NATIVE_CONTROL_STATUS["field"],
+        "native_control_reason": NATIVE_CONTROL_STATUS["reason"],
     }
     diagnostics["claude_cli_available"] = shutil_which("claude") is not None
     return diagnostics

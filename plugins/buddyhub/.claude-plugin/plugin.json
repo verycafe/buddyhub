@@ -1,7 +1,7 @@
 {
   "name": "buddyhub",
-  "version": "0.1.5",
-  "description": "Reactive TUI Buddy for Claude Code with real Buddy identity sync, lifecycle controls, and safe cleanup.",
+  "version": "0.1.6",
+  "description": "Experimental diagnostics for official Claude Code Buddy identity and native control-path research.",
   "author": {
     "name": "verycafe"
   }

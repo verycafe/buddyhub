@@ -292,12 +292,12 @@ Sources:
 
 ### Important caveat
 
-We do not currently have an official public extension point that guarantees third-party plugins can inject a custom Buddy widget directly into Claude Code's internal input-area UI.
+We do not currently have an official public extension point that guarantees third-party plugins can inject or directly control the native Buddy widget that Claude Code renders in the bottom-right UI.
 
 Why it matters:
 
-- BuddyHub should not assume native in-input embedding is available
-- V1 should prefer a nearby or external companion display that is controllable today
+- knowing the Buddy schema is not the same as knowing how to drive the official Buddy runtime
+- BuddyHub must not confuse "we understand the Buddy" with "plugins can control the Buddy"
 
 Confidence: `Inference`
 
@@ -432,31 +432,183 @@ Why it matters:
 
 Confidence: `Local runtime` for the observed transcript shape, `Inference` for the product rule derived from it
 
+## Official Buddy Control Surface Findings
+
+### Official plugin docs do not expose Buddy UI control
+
+The official Claude Code plugin docs currently document third-party plugin components such as:
+
+- commands and skills
+- agents
+- hooks
+- MCP servers
+- LSP servers
+- `settings.json`
+- `bin/`
+
+This research pass did not find an official plugin component for:
+
+- `local-jsx`
+- `setAppState`
+- `companionReaction`
+- direct native Buddy UI control
+
+Why it matters:
+
+- a normal plugin cannot assume it can define or call the same internal Buddy UI command type used by Claude Code itself
+- the existence of plugin commands does not imply access to native Buddy rendering
+
+Confidence: `Official`
+Sources:
+
+- [Claude Code Plugins](https://code.claude.com/docs/en/plugins)
+- [Claude Code Plugins Reference](https://code.claude.com/docs/en/plugins-reference)
+
+### Local Claude binary shows an internal Buddy control path
+
+Inspection of the local Claude Code 2.1.92 binary strings on this machine shows:
+
+- a built-in `/buddy` command implemented as `type:"local-jsx"`
+- internal companion intro generation from the current Buddy record
+- internal writes to `companionReaction`
+- internal writes to `companionPetAt`
+- use of in-process `setAppState(...)` to update Buddy UI state
+
+Why it matters:
+
+- the official Buddy is definitely controlled by an internal app-state path
+- this is evidence that the native Buddy can become more dynamic
+- but it is not evidence that third-party plugins can reach that path
+
+Confidence: `Local runtime`
+Sources:
+
+- [/Users/tvwoo/.local/share/claude/versions/2.1.92](/Users/tvwoo/.local/share/claude/versions/2.1.92)
+- [/tmp/claude-2.1.92.strings](/tmp/claude-2.1.92.strings)
+
+### Native control path includes a Buddy reaction API and app-state write
+
+This round of local binary inspection found a more specific native pipeline:
+
+- `_S7(...)` inspects recent conversation state and tool-result context
+- `Oo_(...)` posts to an internal endpoint:
+  - `/api/organizations/{orgUuid}/claude_code/buddy_react`
+- the returned reaction string is then written into native app state:
+  - `setAppState(... companionReaction: reaction ...)`
+
+The same area also shows:
+
+- native hatch flow
+- native pet flow
+- native mute state
+
+Why it matters:
+
+- official Buddy dynamics are not just transcript metadata
+- they depend on native in-process state mutation
+- a third-party plugin would need some way to reach that same native state write path
+
+Confidence: `Local runtime` + `Reverse-engineered`
+Sources:
+
+- [/tmp/claude-2.1.92.strings](/tmp/claude-2.1.92.strings)
+
+### Transcript access is identity-level, not control-level
+
+On this machine, Claude transcripts expose `companion_intro` attachments containing:
+
+- `name`
+- `species`
+
+This research pass did not find transcript events that let a third-party plugin set:
+
+- `companionReaction`
+- a native Buddy animation state
+- a native Buddy emotion or bubble state
+
+Why it matters:
+
+- transcript parsing is enough to verify the user's Buddy identity
+- transcript parsing is not currently enough to drive the official Buddy UI
+
+Confidence: `Local runtime`
+
+### Current blocker
+
+BuddyHub's intended product target is:
+
+- enhance the official Claude Code Buddy already shown in the bottom-right UI
+
+This research pass confirms:
+
+- we understand a large part of the Buddy schema
+- we can read the current Buddy identity from transcripts
+- we can see an internal native Buddy control path in the Claude binary
+
+But it does not yet confirm:
+
+- a supported third-party plugin path to set the native Buddy's `companionReaction`
+- a supported third-party plugin path to invoke first-party `local-jsx` Buddy behavior from BuddyHub
+- a writable config or runtime file on disk that safely controls the native Buddy widget
+
+Why it matters:
+
+- BuddyHub must not claim success just because `/buddyhub:open` or `/buddyhub:status` render text
+- until the official Buddy control path is reachable, text output is diagnostic tooling, not the finished product
+
+Confidence: `Inference`
+
+### First-party auth is confirmed locally
+
+This machine currently reports:
+
+- `claude auth status --json`
+  - `loggedIn: true`
+  - `authMethod: oauth_token`
+  - `apiProvider: firstParty`
+
+Local telemetry samples on this machine also repeatedly include:
+
+- `provider: "firstParty"`
+
+Why it matters:
+
+- the current blocker is not "wrong auth provider"
+- the failure to enhance the native Buddy cannot be explained by non-first-party auth alone
+- the unresolved problem is native control-path reachability from third-party plugin code
+
+Confidence: `Local runtime`
+Sources:
+
+- `claude auth status --json`
+- [/Users/tvwoo/.claude/settings.json](/Users/tvwoo/.claude/settings.json)
+- `/Users/tvwoo/.claude/telemetry/*.json`
+
 ## Product Implications for BuddyHub
 
 ### What is safe to build first
 
-A strong first version can focus on:
+The following are safe as research and diagnostic tools:
 
-- showing a Buddy visually
-- reacting to Claude Code activity states
-- keeping state mapping simple and reliable
-- avoiding undocumented internal UI hooks
+- hook-driven state capture
+- verified Buddy identity capture
+- compact debug commands
+- optional status-line summaries
+
+These are useful for investigation, but they do not satisfy the core product goal by themselves.
 
 Confidence: `Inference`
 
-### Recommended V1 framing
+### Recommended product framing
 
-Recommended V1 definition:
+Recommended BuddyHub definition:
 
-`A reactive Claude companion that enhances the user's current Claude Buddy and visibly mirrors Claude Code's current working state.`
+`A Claude Code plugin that enhances the user's official native Buddy in the bottom-right UI with more visible, verified dynamics driven by Claude activity.`
 
-This can be built before:
+Important implementation rule:
 
-- full long-term memory
-- cloud sync
-- complex task-routing logic
-- native internal Claude UI embedding
+- text commands and status-line output may exist as support tooling
+- they must not be treated as the primary Buddy experience or as completion criteria
 
 Confidence: `Inference`
 
@@ -465,9 +617,9 @@ Confidence: `Inference`
 Do not assume the following until directly confirmed:
 
 - direct access to the user's official Buddy record
-- stable access to official Buddy species or stat data from the Claude runtime
+- stable access to official Buddy species or stat data from the Claude runtime beyond `companion_intro`
 - a documented third-party Buddy UI injection API
-- official support for rendering a plugin's custom companion inside Claude's exact native Buddy slot
+- a documented third-party way to write native `companionReaction`
 - permission to fabricate missing Buddy appearance or identity fields from reverse-engineered defaults
 
 Confidence: `Inference`
@@ -475,12 +627,9 @@ Confidence: `Inference`
 ## Open Questions
 
 1. Is there any local Claude Code runtime file on this machine that stores the official Buddy identity, stats, or companion seed?
-2. Can Claude Code plugin APIs expose a status-line or adjacent surface that is sufficient for a compact in-app Buddy?
-3. Should BuddyHub V1 render as:
-   - a desktop floating Buddy
-   - a terminal/status-line Buddy
-   - both
-4. If BuddyHub later mirrors the leaked Buddy schema, which fields are required for compatibility and which are only cosmetic?
+2. Is there any supported plugin-accessible path to the internal native Buddy control surface, especially `companionReaction`?
+3. Can a third-party plugin define or reach `local-jsx` command behavior, or is that strictly first-party/internal?
+4. If BuddyHub later mirrors more of the leaked Buddy schema, which fields are required for compatibility and which are only cosmetic?
 5. Should BuddyHub preserve the leaked stat names as-is, or abstract them behind user-facing labels?
 
 ## Research Log
@@ -500,3 +649,41 @@ Why it matters:
 Confidence:
 
 - mixed: `Official`, `Reverse-engineered`, `Local runtime`, and `Inference`
+
+### 2026-04-04 - Official Buddy control surface pass
+
+Finding:
+
+- official plugin docs expose commands, skills, hooks, MCP, LSP, settings, and `bin`, but no Buddy-specific UI control surface
+- local Claude Code 2.1.92 binary contains a built-in `local-jsx` `/buddy` command and internal `companionReaction` updates through `setAppState(...)`
+- transcripts on this machine expose `companion_intro` but not a writable native Buddy reaction channel
+
+Why it matters:
+
+- BuddyHub's real target is the official bottom-right Buddy, not a parallel text pet
+- current BuddyHub text commands are diagnostic aids only
+- the core technical question is now whether a third-party plugin can reach the internal native Buddy control path without patching Claude Code
+
+Confidence:
+
+- mixed: `Official`, `Local runtime`, and `Inference`
+
+### 2026-04-04 - Native reaction pipeline and auth gate follow-up
+
+Finding:
+
+- local auth status confirms `apiProvider = firstParty`
+- no current shell evidence was found for `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`
+- the local Claude binary shows the native Buddy reaction pipeline as:
+  - `_S7(...) -> Oo_(...) -> setAppState(... companionReaction ...)`
+- the reaction request goes through an internal Buddy endpoint rather than transcript writes alone
+
+Why it matters:
+
+- BuddyHub is not blocked on identity lookup anymore
+- BuddyHub is blocked on native control-path access
+- a standard third-party plugin still has no confirmed way to write the official Buddy's `companionReaction`
+
+Confidence:
+
+- mixed: `Local runtime`, `Reverse-engineered`, and `Inference`

@@ -4,14 +4,14 @@
     "name": "verycafe"
   },
   "metadata": {
-    "description": "Reactive TUI Buddy companion for Claude Code with real Buddy identity sync.",
-    "version": "0.1.5"
+    "description": "Experimental diagnostics for official Claude Code Buddy identity and native control-path research.",
+    "version": "0.1.6"
   },
   "plugins": [
     {
       "name": "buddyhub",
-      "description": "Reactive TUI Buddy for Claude Code with real Buddy identity sync, lifecycle controls, and safe cleanup.",
-      "version": "0.1.5",
+      "description": "Experimental diagnostics for official Claude Code Buddy identity and native control-path research.",
+      "version": "0.1.6",
       "author": {
         "name": "verycafe"
       },

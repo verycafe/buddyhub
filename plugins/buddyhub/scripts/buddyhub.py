@@ -113,6 +113,9 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         f"- UI mode: `{payload['ui_mode']}`",
         f"- Lifecycle: `{payload['lifecycle_state']}`",
         f"- Buddy state: `{payload['current_state']}`",
+        f"- Native control mode: `{payload['native_control_mode']}`",
+        f"- Native control writable: `{str(payload['native_control_writable']).lower()}`",
+        f"- Native control field: `{payload['native_control_field']}`",
         f"- Identity available: `{str(payload['identity_available']).lower()}`",
         f"- Buddy name: `{payload['buddy_name'] or 'unknown'}`",
         f"- Buddy species: `{payload['buddy_species'] or 'unknown'}`",
@@ -125,6 +128,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         f"- Sessions file exists: `{str(payload['sessions_file_exists']).lower()}`",
         f"- Active session: `{payload['active_session_id'] or 'none'}`",
         f"- Active project: `{payload['active_project'] or 'unknown'}`",
+        f"- Native control reason: {payload['native_control_reason']}",
     ]
     print("\n".join(lines))
     return 0
