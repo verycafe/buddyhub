@@ -324,7 +324,7 @@ def build_parser() -> argparse.ArgumentParser:
     inspect_parser.set_defaults(func=cmd_inspect)
 
     apply_parser = subparsers.add_parser("apply")
-    apply_parser.add_argument("--target", choices=("rehearsal", "installed"), default="rehearsal")
+    apply_parser.add_argument("--target", choices=("rehearsal", "installed"), default="installed")
     apply_parser.add_argument("--json", action="store_true")
     apply_parser.set_defaults(func=cmd_apply)
 
