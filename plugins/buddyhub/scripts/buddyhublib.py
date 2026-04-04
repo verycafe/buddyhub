@@ -3,147 +3,59 @@ from __future__ import annotations
 
 import json
 import os
-import signal
+import shutil
+import subprocess
 import sys
 import tempfile
-import time
-import textwrap
-from contextlib import contextmanager
 from datetime import datetime, timezone
+import hashlib
 from pathlib import Path
 from typing import Any
 
-import fcntl
-
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
+CLAUDE_CONFIG_ROOT = Path.home() / ".claude"
+CLAUDE_PROJECTS_ROOT = CLAUDE_CONFIG_ROOT / "projects"
+CLAUDE_VERSIONS_ROOT = Path.home() / ".local" / "share" / "claude" / "versions"
 DATA_ROOT = Path(
     os.environ.get("CLAUDE_PLUGIN_DATA_DIR")
     or os.environ.get("BUDDYHUB_DATA_ROOT")
     or (Path.home() / ".claude" / "plugins" / "data" / "buddyhub")
 )
-RUNTIME_FILE = DATA_ROOT / "runtime.json"
-SESSIONS_FILE = DATA_ROOT / "sessions.json"
 OWNERSHIP_FILE = DATA_ROOT / "ownership.json"
-STATE_LOCK_FILE = DATA_ROOT / "state.lock"
-LEGACY_PID_FILE = DATA_ROOT / "sidecar.pid"
-LEGACY_UI_REQUEST_FILE = DATA_ROOT / "ui-request.json"
-LEGACY_LOG_FILE = DATA_ROOT / "sidecar.log"
+NATIVE_PATCH_STATE_FILE = DATA_ROOT / "native-patch.json"
+NATIVE_BACKUP_ROOT = DATA_ROOT / "native-backups"
+NATIVE_WORK_ROOT = DATA_ROOT / "native-work"
 
-STALE_SESSION_SECONDS = 120
-IDLE_TIMEOUT_SECONDS = 30
 PLUGIN_REF = "buddyhub@buddyhub"
 
-TOOL_STATE_MAP = {
-    "Read": "reading",
-    "Glob": "reading",
-    "Grep": "reading",
-    "Edit": "coding",
-    "Write": "coding",
-    "MultiEdit": "coding",
-    "NotebookEdit": "coding",
-    "Bash": "running",
-    "WebFetch": "browsing",
-    "WebSearch": "browsing",
-    "AskUserQuestion": "waiting",
-    "Task": "thinking",
+SUPPORTED_PATCH_PROFILES: dict[str, dict[str, Any]] = {
+    "2.1.92": {
+        "profile_id": "blob_tophat_preview",
+        "description": "Add a tophat row to the official blob Buddy frames.",
+        "species": "blob",
+        "element": "tophat",
+        "replacements": [
+            {
+                "old": b'[uk_]:[["            ","   .----.   "',
+                "new": b'[uk_]:[["   [___]    ","   .----.   "',
+                "expected_matches": 2,
+            },
+            {
+                "old": b'["            ","  .------.  "',
+                "new": b'["   [___]    ","  .------.  "',
+                "expected_matches": 2,
+            },
+            {
+                "old": b'["            ","    .--.    "',
+                "new": b'["   [___]    ","    .--.    "',
+                "expected_matches": 2,
+            },
+        ],
+    }
 }
-
-VISIBLE_STATES = {
-    "idle",
-    "thinking",
-    "reading",
-    "coding",
-    "running",
-    "browsing",
-    "waiting",
-    "done",
-    "error",
-}
-
-LIFECYCLE_STATES = {
-    "installed",
-    "enabled",
-    "paused",
-    "disabled",
-    "error",
-    "uninstalled",
-}
-
-BUDDY_EXPRESSIONS = {
-    "idle": {
-        "headline": "idle",
-        "subtitle": "resting quietly",
-        "token": "idle",
-    },
-    "thinking": {
-        "headline": "thinking...",
-        "subtitle": "working through your request",
-        "token": "think",
-    },
-    "reading": {
-        "headline": "reading",
-        "subtitle": "looking through files",
-        "token": "read",
-    },
-    "coding": {
-        "headline": "coding",
-        "subtitle": "making changes",
-        "token": "edit",
-    },
-    "running": {
-        "headline": "running",
-        "subtitle": "executing commands",
-        "token": "run",
-    },
-    "browsing": {
-        "headline": "browsing",
-        "subtitle": "checking the web",
-        "token": "web",
-    },
-    "waiting": {
-        "headline": "waiting",
-        "subtitle": "needs your input",
-        "token": "wait",
-    },
-    "done": {
-        "headline": "done",
-        "subtitle": "finished this step",
-        "token": "done",
-    },
-    "error": {
-        "headline": "error",
-        "subtitle": "something went wrong",
-        "token": "err",
-    },
-    "paused": {
-        "headline": "paused",
-        "subtitle": "taking a short nap",
-        "token": "pause",
-    },
-    "disabled": {
-        "headline": "disabled",
-        "subtitle": "off duty",
-        "token": "off",
-    },
-}
-
-NATIVE_CONTROL_STATUS = {
-    "mode": "experimental",
-    "writable": False,
-    "field": "companionReaction",
-    "reason": (
-        "No supported third-party plugin path has been confirmed for writing the "
-        "official Buddy's native reaction state."
-    ),
-}
-
 
 def ensure_data_root() -> None:
     DATA_ROOT.mkdir(parents=True, exist_ok=True)
-
-
-def now_ts() -> float:
-    return time.time()
 
 
 def now_iso() -> str:
@@ -177,72 +89,27 @@ def write_json(path: Path, payload: Any) -> None:
         tmp_path.unlink(missing_ok=True)
 
 
-@contextmanager
-def state_lock() -> Any:
-    ensure_data_root()
-    with STATE_LOCK_FILE.open("a+", encoding="utf-8") as handle:
-        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
-        try:
-            yield
-        finally:
-            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+def sha1_file(path: Path) -> str:
+    digest = hashlib.sha1()
+    with path.open("rb") as handle:
+        while True:
+            chunk = handle.read(1024 * 1024)
+            if not chunk:
+                break
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def parse_semver(name: str) -> tuple[int, int, int] | None:
+    parts = name.split(".")
+    if len(parts) != 3 or any(not part.isdigit() for part in parts):
+        return None
+    return tuple(int(part) for part in parts)  # type: ignore[return-value]
 
 
 def plugin_version() -> str:
     plugin_meta = read_json(PLUGIN_ROOT / ".claude-plugin" / "plugin.json", {})
     return str(plugin_meta.get("version", "0.1.0"))
-
-
-def default_runtime() -> dict[str, Any]:
-    return {
-        "plugin": "buddyhub",
-        "version": plugin_version(),
-        "created_at": now_iso(),
-        "updated_at": now_iso(),
-        "lifecycle_state": "enabled",
-        "current_state": "idle",
-        "active_session_id": None,
-        "last_event": None,
-        "last_update_ts": 0.0,
-        "statusline_enabled": False,
-        "buddy_name": None,
-        "identity": {
-            "available": False,
-            "source": None,
-            "name": None,
-            "species": None,
-            "rarity": None,
-            "shiny": None
-        }
-    }
-
-
-def default_sessions() -> dict[str, Any]:
-    return {"version": 1, "sessions": {}}
-
-
-def load_runtime() -> dict[str, Any]:
-    runtime = default_runtime()
-    runtime.update(read_json(RUNTIME_FILE, {}))
-    if runtime.get("lifecycle_state") not in LIFECYCLE_STATES:
-        runtime["lifecycle_state"] = "enabled"
-    return runtime
-
-
-def save_runtime(runtime: dict[str, Any]) -> None:
-    runtime["updated_at"] = now_iso()
-    write_json(RUNTIME_FILE, runtime)
-
-
-def load_sessions() -> dict[str, Any]:
-    sessions = default_sessions()
-    sessions.update(read_json(SESSIONS_FILE, {}))
-    sessions.setdefault("sessions", {})
-    return sessions
-
-
-def save_sessions(sessions: dict[str, Any]) -> None:
-    write_json(SESSIONS_FILE, sessions)
 
 
 def ensure_ownership_manifest() -> dict[str, Any]:
@@ -255,116 +122,19 @@ def ensure_ownership_manifest() -> dict[str, Any]:
             "created_at": now_iso(),
             "data_root": str(DATA_ROOT),
             "owned_files": [
-                str(RUNTIME_FILE),
-                str(SESSIONS_FILE),
                 str(OWNERSHIP_FILE),
-                str(STATE_LOCK_FILE),
+                str(NATIVE_PATCH_STATE_FILE),
             ],
-            "runtime_assets": [],
+            "runtime_assets": [
+                str(NATIVE_BACKUP_ROOT),
+                str(NATIVE_WORK_ROOT),
+            ],
             "config_integrations": {
-                "plugin_hooks": "managed by Claude Code plugin install",
-                "status_line": None,
+                "native_patch_target": None,
             },
         }
         write_json(OWNERSHIP_FILE, manifest)
     return manifest
-
-
-def read_hook_payload() -> dict[str, Any]:
-    raw = sys.stdin.read().strip()
-    if not raw:
-        return {}
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError:
-        return {}
-
-
-def detect_session_id(payload: dict[str, Any]) -> str:
-    return str(
-        payload.get("session_id")
-        or os.environ.get("CLAUDE_SESSION_ID")
-        or "unknown-session"
-    )
-
-
-def session_project_name(payload: dict[str, Any]) -> str | None:
-    cwd = payload.get("cwd")
-    if not cwd:
-        return None
-    return Path(cwd).name
-
-
-def runtime_state_for_event(event_name: str, payload: dict[str, Any]) -> str:
-    if event_name == "SessionStart":
-        return "idle"
-    if event_name == "SessionEnd":
-        return "idle"
-    if event_name == "UserPromptSubmit":
-        return "thinking"
-    if event_name == "Notification":
-        return "waiting"
-    if event_name == "Stop":
-        return "done"
-    if event_name == "PostToolUse":
-        return "thinking"
-    if event_name == "PreToolUse":
-        tool_name = str(payload.get("tool_name") or os.environ.get("CLAUDE_TOOL_NAME") or "")
-        return TOOL_STATE_MAP.get(tool_name, "thinking")
-    return "thinking"
-
-
-def prune_stale_sessions(sessions: dict[str, Any]) -> None:
-    current_time = now_ts()
-    for session in sessions.get("sessions", {}).values():
-        last_update = float(session.get("last_update_ts", 0))
-        stale = current_time - last_update > STALE_SESSION_SECONDS
-        session["stale"] = stale
-        if stale:
-            session["active"] = False
-            if session.get("state") in {"done", "waiting"}:
-                session["state"] = "idle"
-
-
-def choose_active_session(runtime: dict[str, Any], sessions: dict[str, Any]) -> str | None:
-    session_map = sessions.get("sessions", {})
-    pinned = runtime.get("active_session_id")
-    if pinned and pinned in session_map and session_map[pinned].get("active") and not session_map[pinned].get("stale"):
-        return pinned
-
-    valid = [
-        session
-        for session in session_map.values()
-        if session.get("active") and not session.get("stale")
-    ]
-    if not valid:
-        return None
-    valid.sort(key=lambda item: float(item.get("last_update_ts", 0)), reverse=True)
-    return str(valid[0]["session_id"])
-
-
-def recompute_runtime_state(runtime: dict[str, Any], sessions: dict[str, Any]) -> None:
-    prune_stale_sessions(sessions)
-    active_session_id = choose_active_session(runtime, sessions)
-    runtime["active_session_id"] = active_session_id
-    if runtime.get("lifecycle_state") == "paused":
-        runtime["current_state"] = "idle"
-        return
-    if runtime.get("lifecycle_state") == "disabled":
-        runtime["current_state"] = "idle"
-        return
-    if not active_session_id:
-        runtime["current_state"] = "idle"
-        return
-
-    active = sessions["sessions"].get(active_session_id, {})
-    last_update = float(active.get("last_update_ts", 0))
-    if now_ts() - last_update > IDLE_TIMEOUT_SECONDS:
-        runtime["current_state"] = "idle"
-    else:
-        runtime["current_state"] = str(active.get("state", "idle"))
-    if runtime["current_state"] not in VISIBLE_STATES:
-        runtime["current_state"] = "idle"
 
 
 def empty_identity() -> dict[str, Any]:
@@ -396,10 +166,14 @@ def read_companion_intro(transcript_path: str | None) -> dict[str, Any] | None:
                     record = json.loads(raw_line)
                 except json.JSONDecodeError:
                     continue
-                if record.get("type") != "attachment":
-                    continue
-                attachment = record.get("attachment") or {}
-                if attachment.get("type") != "companion_intro":
+                attachment: dict[str, Any] | None = None
+                if record.get("type") == "attachment":
+                    candidate = record.get("attachment") or {}
+                    if candidate.get("type") == "companion_intro":
+                        attachment = candidate
+                elif record.get("type") == "companion_intro":
+                    attachment = record
+                if not attachment:
                     continue
                 name = attachment.get("name")
                 species = attachment.get("species")
@@ -418,364 +192,466 @@ def read_companion_intro(transcript_path: str | None) -> dict[str, Any] | None:
 
     return None
 
+def default_native_patch_state() -> dict[str, Any]:
+    return {
+        "version": 1,
+        "rehearsal": None,
+        "installed": None,
+    }
 
-def resolve_buddy_identity(runtime: dict[str, Any], sessions: dict[str, Any]) -> dict[str, Any]:
-    session_map = sessions.get("sessions", {})
-    candidate_sessions: list[dict[str, Any]] = []
 
-    active_session_id = runtime.get("active_session_id")
-    if active_session_id and active_session_id in session_map:
-        candidate_sessions.append(session_map[active_session_id])
+def load_native_patch_state() -> dict[str, Any]:
+    state = default_native_patch_state()
+    state.update(read_json(NATIVE_PATCH_STATE_FILE, {}))
+    return state
 
-    remaining_sessions = [
-        session
-        for session in session_map.values()
-        if session.get("session_id") != active_session_id
-    ]
-    remaining_sessions.sort(key=lambda item: float(item.get("last_update_ts", 0)), reverse=True)
-    candidate_sessions.extend(remaining_sessions)
 
-    seen_paths: set[str] = set()
-    for session in candidate_sessions:
-        transcript_path = session.get("transcript_path")
-        if not transcript_path or transcript_path in seen_paths:
+def save_native_patch_state(state: dict[str, Any]) -> None:
+    write_json(NATIVE_PATCH_STATE_FILE, state)
+
+
+def current_identity_from_projects() -> dict[str, Any]:
+    if not CLAUDE_PROJECTS_ROOT.exists():
+        return empty_identity()
+
+    candidates: list[tuple[float, Path]] = []
+    for path in CLAUDE_PROJECTS_ROOT.rglob("*.jsonl"):
+        try:
+            candidates.append((path.stat().st_mtime, path))
+        except OSError:
             continue
-        seen_paths.add(transcript_path)
-        identity = read_companion_intro(transcript_path)
-        if identity:
-            return identity
 
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    for _, path in candidates:
+        identity = read_companion_intro(str(path))
+        if identity:
+            identity["transcript_path"] = str(path)
+            return identity
     return empty_identity()
 
 
-def record_hook_event(event_name: str, payload: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
-    ensure_ownership_manifest()
-    with state_lock():
-        runtime = load_runtime()
-        sessions = load_sessions()
-        session_id = detect_session_id(payload)
-        session_map = sessions.setdefault("sessions", {})
-        session_record = session_map.setdefault(
-            session_id,
-            {
-                "session_id": session_id,
-                "created_at": now_iso(),
-                "active": True,
-                "stale": False,
-                "project_name": session_project_name(payload),
-                "cwd": payload.get("cwd"),
-                "transcript_path": payload.get("transcript_path"),
-            },
-        )
-        session_record["session_id"] = session_id
-        session_record["cwd"] = payload.get("cwd", session_record.get("cwd"))
-        session_record["transcript_path"] = payload.get("transcript_path", session_record.get("transcript_path"))
-        session_record["project_name"] = session_project_name(payload) or session_record.get("project_name")
-        session_record["last_event"] = event_name
-        session_record["last_update_ts"] = now_ts()
-        session_record["updated_at"] = now_iso()
-        session_record["tool_name"] = payload.get("tool_name")
-        session_record["source"] = payload.get("source")
-        session_record["reason"] = payload.get("reason")
-        session_record["active"] = event_name != "SessionEnd"
-        session_record["stale"] = False
-        session_record["state"] = runtime_state_for_event(event_name, payload)
+def detect_native_target() -> dict[str, Any]:
+    override = os.environ.get("BUDDYHUB_CLAUDE_BINARY")
+    result: dict[str, Any] = {
+        "platform": sys.platform,
+        "target_detected": False,
+        "target_path": None,
+        "target_version": None,
+        "target_sha1": None,
+        "install_root": None,
+        "detection_mode": None,
+        "profile_supported": False,
+        "profile_id": None,
+        "profile_description": None,
+        "profile_species": None,
+        "reason": None,
+    }
 
-        runtime["last_event"] = event_name
-        runtime["last_update_ts"] = session_record["last_update_ts"]
-        if event_name == "SessionStart":
-            runtime["lifecycle_state"] = runtime.get("lifecycle_state", "enabled")
-        recompute_runtime_state(runtime, sessions)
-        runtime["identity"] = resolve_buddy_identity(runtime, sessions)
-        runtime["buddy_name"] = runtime["identity"].get("name")
-        save_sessions(sessions)
-        save_runtime(runtime)
-        return runtime, sessions
+    if override:
+        candidate = Path(override).expanduser()
+        result["detection_mode"] = "env"
+        if candidate.exists() and candidate.is_file():
+            version = candidate.name
+            profile = SUPPORTED_PATCH_PROFILES.get(version)
+            result.update(
+                {
+                    "target_detected": True,
+                    "target_path": str(candidate),
+                    "target_version": version,
+                    "target_sha1": sha1_file(candidate),
+                    "profile_supported": profile is not None,
+                    "profile_id": profile.get("profile_id") if profile else None,
+                    "profile_description": profile.get("description") if profile else None,
+                    "profile_species": profile.get("species") if profile else None,
+                    "reason": None if profile else "No supported patch profile for this binary version.",
+                }
+            )
+            return result
+        result["reason"] = "BUDDYHUB_CLAUDE_BINARY does not point to a readable file."
+        return result
+
+    if sys.platform != "darwin":
+        result["reason"] = "Automatic native-target detection is currently validated only on macOS."
+        return result
+
+    result["install_root"] = str(CLAUDE_VERSIONS_ROOT)
+    result["detection_mode"] = "macos-versions-dir"
+
+    if not CLAUDE_VERSIONS_ROOT.exists():
+        result["reason"] = "Claude versions directory does not exist on this machine."
+        return result
+
+    candidates: list[tuple[tuple[int, int, int], Path]] = []
+    for path in CLAUDE_VERSIONS_ROOT.iterdir():
+        if not path.is_file():
+            continue
+        semver = parse_semver(path.name)
+        if semver is None:
+            continue
+        candidates.append((semver, path))
+
+    if not candidates:
+        result["reason"] = "No versioned Claude executable was found in the versions directory."
+        return result
+
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    _, target = candidates[0]
+    version = target.name
+    profile = SUPPORTED_PATCH_PROFILES.get(version)
+    result.update(
+        {
+            "target_detected": True,
+            "target_path": str(target),
+            "target_version": version,
+            "target_sha1": sha1_file(target),
+            "profile_supported": profile is not None,
+            "profile_id": profile.get("profile_id") if profile else None,
+            "profile_description": profile.get("description") if profile else None,
+            "profile_species": profile.get("species") if profile else None,
+            "reason": None if profile else "No supported patch profile for the detected Claude version.",
+        }
+    )
+    return result
 
 
-def pid_is_alive(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    return True
+def ensure_native_backup(target_path: Path, version: str) -> dict[str, Any]:
+    ensure_data_root()
+    NATIVE_BACKUP_ROOT.mkdir(parents=True, exist_ok=True)
+    source_sha1 = sha1_file(target_path)
+    backup_dir = NATIVE_BACKUP_ROOT / version
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    backup_path = backup_dir / f"{target_path.name}.{source_sha1}.bak"
+    created = False
+    if not backup_path.exists():
+        shutil.copy2(target_path, backup_path)
+        created = True
+    return {
+        "backup_path": str(backup_path),
+        "created": created,
+        "source_sha1": source_sha1,
+    }
 
 
-def read_legacy_pid() -> int | None:
-    try:
-        return int(LEGACY_PID_FILE.read_text(encoding="utf-8").strip())
-    except (OSError, ValueError):
+def existing_native_backup(target_path: Path, version: str) -> dict[str, Any] | None:
+    source_sha1 = sha1_file(target_path)
+    backup_path = NATIVE_BACKUP_ROOT / version / f"{target_path.name}.{source_sha1}.bak"
+    if not backup_path.exists():
         return None
+    return {
+        "backup_path": str(backup_path),
+        "created": False,
+        "source_sha1": source_sha1,
+    }
 
 
-def stop_legacy_runtime() -> bool:
-    pid = read_legacy_pid()
-    if not pid:
-        if LEGACY_PID_FILE.exists():
-            LEGACY_PID_FILE.unlink(missing_ok=True)
-        return False
-    if not pid_is_alive(pid):
-        LEGACY_PID_FILE.unlink(missing_ok=True)
-        return False
-    try:
-        os.kill(pid, signal.SIGTERM)
-    except OSError:
-        pass
-    for _ in range(20):
-        if not pid_is_alive(pid):
-            break
-        time.sleep(0.05)
-    LEGACY_PID_FILE.unlink(missing_ok=True)
-    return True
+def rehearsal_copy_path(version: str) -> Path:
+    return NATIVE_WORK_ROOT / version / f"claude-{version}-patched"
 
 
-def set_lifecycle_state(new_state: str) -> dict[str, Any]:
-    with state_lock():
-        runtime = load_runtime()
-        if new_state not in LIFECYCLE_STATES:
-            raise ValueError(f"Unsupported lifecycle state: {new_state}")
-        runtime["lifecycle_state"] = new_state
-        recompute_runtime_state(runtime, load_sessions())
-        save_runtime(runtime)
-        return runtime
-
-
-def update_runtime_preferences(**changes: Any) -> dict[str, Any]:
-    with state_lock():
-        runtime = load_runtime()
-        runtime.update(changes)
-        save_runtime(runtime)
-        return runtime
-
-
-def display_state(runtime: dict[str, Any]) -> str:
-    lifecycle = str(runtime.get("lifecycle_state", "enabled"))
-    if lifecycle in {"paused", "disabled", "error"}:
-        return lifecycle
-    state = str(runtime.get("current_state", "idle"))
-    if state in BUDDY_EXPRESSIONS:
-        return state
-    return "idle"
-
-
-def buddy_expression(runtime: dict[str, Any]) -> dict[str, str]:
-    return BUDDY_EXPRESSIONS[display_state(runtime)]
-
-
-def render_buddy_bubble(runtime: dict[str, Any], *, compact: bool = False) -> list[str]:
-    expression = buddy_expression(runtime)
-    width = 20 if compact else 26
-    wrapped: list[str] = []
-    for raw in (expression["headline"], expression["subtitle"]):
-        wrapped.extend(textwrap.wrap(raw, width=width) or [""])
-
-    bubble_width = max(len(line) for line in wrapped)
-    cap = "-" * (bubble_width + 2)
-    lines = [f"      .{cap}."]
-    for line in wrapped:
-        lines.append(f"      | {line:<{bubble_width}} |")
-    lines.append(f"      '{cap}'")
-    return lines
-
-
-def render_identity_card(runtime: dict[str, Any], *, compact: bool = False) -> list[str]:
-    identity = runtime.get("identity", {})
-    if identity.get("available"):
-        details = [
-            identity.get("name") or "Current Claude Buddy",
-            f"species: {identity.get('species') or 'unknown'}",
-        ]
-        if not compact:
-            details.append("verified: companion_intro")
-    else:
-        details = [
-            "Current Claude Buddy",
-            "identity unavailable",
-            "waiting for companion_intro",
-        ]
-
-    panel_width = max(len(line) for line in details)
-    return [
-        f"      +{'-' * (panel_width + 2)}+",
-        *[f"      | {line:<{panel_width}} |" for line in details],
-        f"      +{'-' * (panel_width + 2)}+",
-    ]
-
-
-def render_buddy_scene(info: dict[str, Any], *, compact: bool = False) -> str:
-    runtime = info["runtime"]
-    active_session = info["active_session"] or {}
-    identity = runtime.get("identity", {})
-    state = display_state(runtime)
-    name = identity.get("name") or "Current Claude Buddy"
-    project = active_session.get("project_name")
-    last_event = runtime.get("last_event") or "none"
-    lifecycle = runtime.get("lifecycle_state", "enabled")
-    if identity.get("available"):
-        identity_line = (
-            f"Identity source: `{identity.get('source')}`\n"
-            "Unverified Buddy fields remain hidden in V1."
+def apply_patch_profile_to_binary(binary_path: Path, profile: dict[str, Any]) -> list[dict[str, Any]]:
+    data = binary_path.read_bytes()
+    results: list[dict[str, Any]] = []
+    for replacement in profile["replacements"]:
+        old = replacement["old"]
+        new = replacement["new"]
+        expected_matches = replacement["expected_matches"]
+        actual_matches = data.count(old)
+        if actual_matches != expected_matches:
+            raise RuntimeError(
+                f"Patch profile mismatch for {profile['profile_id']}: expected {expected_matches} matches, got {actual_matches}."
+            )
+        data = data.replace(old, new)
+        results.append(
+            {
+                "expected_matches": expected_matches,
+                "actual_matches": actual_matches,
+                "old_preview": old.decode("utf-8", "replace"),
+                "new_preview": new.decode("utf-8", "replace"),
+            }
         )
-    else:
-        identity_line = "Identity source not available yet."
+    binary_path.write_bytes(data)
+    return results
 
-    native_status = (
-        "Official Buddy native control is still experimental.\n"
-        f"`{NATIVE_CONTROL_STATUS['field']}` is not writable from a confirmed third-party plugin path yet."
+
+def codesign_binary(binary_path: Path) -> dict[str, Any]:
+    if sys.platform != "darwin":
+        return {
+            "required": False,
+            "attempted": False,
+            "ok": True,
+            "output": None,
+        }
+
+    result = subprocess.run(  # noqa: S603
+        ["codesign", "-f", "-s", "-", str(binary_path)],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    output = (result.stdout or "") + ("\n" + result.stderr if result.stderr else "")
+    return {
+        "required": True,
+        "attempted": True,
+        "ok": result.returncode == 0,
+        "output": output.strip() or None,
+    }
+
+
+def verify_binary_launch(binary_path: Path) -> dict[str, Any]:
+    result = subprocess.run(  # noqa: S603
+        [str(binary_path), "--version"],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        check=False,
+    )
+    output = (result.stdout or "") + ("\n" + result.stderr if result.stderr else "")
+    return {
+        "ok": result.returncode == 0,
+        "returncode": result.returncode,
+        "output": output.strip() or None,
+    }
+
+
+def restore_binary_from_backup(target_path: Path, backup_path: Path) -> dict[str, Any]:
+    shutil.copy2(backup_path, target_path)
+    target_path.chmod(backup_path.stat().st_mode)
+    launch_result = verify_binary_launch(target_path)
+    return {
+        "target_path": str(target_path),
+        "backup_path": str(backup_path),
+        "launch_check": launch_result,
+    }
+
+
+def inspect_native_patch(*, create_manifest: bool = False) -> dict[str, Any]:
+    if create_manifest:
+        ensure_ownership_manifest()
+    detection = detect_native_target()
+    identity = current_identity_from_projects()
+    patch_state = load_native_patch_state()
+
+    rehearsal = patch_state.get("rehearsal") or {}
+    installed = patch_state.get("installed") or {}
+    rehearsal_path = rehearsal.get("patched_copy_path")
+    rehearsal_exists = bool(rehearsal_path and Path(rehearsal_path).exists())
+    installed_present = bool(installed)
+    target_appears_patched = bool(
+        installed
+        and detection.get("target_detected")
+        and detection.get("target_path") == installed.get("target_path")
+        and detection.get("target_sha1") == installed.get("patched_sha1")
     )
 
-    lines = [
-        "# BuddyHub",
-        "",
-        *render_identity_card(runtime, compact=compact),
-        "",
-        f"Detected official Buddy: `{name}`",
-        f"Observed Buddy state: `{state}`",
-        f"Lifecycle: `{lifecycle}`",
-    ]
+    backup = None
+    if detection.get("target_detected") and detection.get("target_path") and detection.get("target_version"):
+        backup = existing_native_backup(Path(detection["target_path"]), str(detection["target_version"]))
 
-    if project:
-        lines.append(f"Watching project: `{project}`")
-    else:
-        lines.append("Waiting between tasks.")
-
-    lines.append(f"Recent event: `{last_event}`")
-
-    if not compact:
-        lines.append(identity_line)
-        lines.append(native_status)
-
-        if runtime.get("statusline_enabled", False):
-            lines.append("Status line sync is on.")
-
-        lines.extend(
-            [
-                "",
-                "Quick actions:",
-                "- `/buddyhub:status`",
-                "- `/buddyhub:pause`",
-                "- `/buddyhub:doctor`",
-            ]
+    profile_species = detection.get("profile_species")
+    identity_species = identity.get("species")
+    if not profile_species:
+        profile_match = False
+        profile_match_reason = detection.get("reason") or "No supported patch profile was found."
+    elif not identity.get("available"):
+        profile_match = False
+        profile_match_reason = "Current Buddy identity is not verified yet."
+    elif identity_species != profile_species:
+        profile_match = False
+        profile_match_reason = (
+            f"Current Buddy species is {identity_species or 'unknown'}, but the available patch profile targets {profile_species}."
         )
     else:
-        lines.extend(
-            [
-                identity_line,
-                native_status,
-                f"Status line sync: `{str(runtime.get('statusline_enabled', False)).lower()}`",
-            ]
-        )
-    return "\n".join(lines)
+        profile_match = True
+        profile_match_reason = "Detected Buddy identity matches the available visual patch profile."
 
-
-def render_buddy_statusline(info: dict[str, Any]) -> str:
-    runtime = info["runtime"]
-    active_session = info["active_session"] or {}
-    state = display_state(runtime)
-    identity = runtime.get("identity", {})
-    project = active_session.get("project_name")
-    suffix = f" | {project}" if project else ""
-    subject = identity.get("name") or "Claude Buddy"
-    if identity.get("species"):
-        subject = f"{subject} | {identity['species']}"
-    return f"{subject} | {state}{suffix}"
-
-
-def snapshot() -> dict[str, Any]:
-    ensure_ownership_manifest()
-    with state_lock():
-        runtime = load_runtime()
-        sessions = load_sessions()
-        recompute_runtime_state(runtime, sessions)
-        runtime["identity"] = resolve_buddy_identity(runtime, sessions)
-        runtime["buddy_name"] = runtime["identity"].get("name")
-        save_sessions(sessions)
-        save_runtime(runtime)
-        active_session_id = runtime.get("active_session_id")
-        active_session = sessions.get("sessions", {}).get(active_session_id) if active_session_id else None
     return {
-        "runtime": runtime,
-        "sessions": sessions,
-        "active_session": active_session,
-        "paths": {
-            "data_root": str(DATA_ROOT),
-            "runtime_file": str(RUNTIME_FILE),
-            "sessions_file": str(SESSIONS_FILE),
-            "ownership_file": str(OWNERSHIP_FILE),
-            "statusline_script": str(PLUGIN_ROOT / "scripts" / "statusline.py"),
-        },
+        "detection": detection,
+        "identity": identity,
+        "backup": backup,
+        "patch_state": patch_state,
+        "rehearsal_exists": rehearsal_exists,
+        "rehearsal_path": rehearsal_path,
+        "installed_present": installed_present,
+        "target_appears_patched": target_appears_patched,
+        "profile_match": profile_match,
+        "profile_match_reason": profile_match_reason,
+        "data_root": str(DATA_ROOT),
+        "backup_root": str(NATIVE_BACKUP_ROOT),
+        "work_root": str(NATIVE_WORK_ROOT),
+        "patch_state_file": str(NATIVE_PATCH_STATE_FILE),
     }
 
 
-def human_status_report() -> str:
-    info = snapshot()
-    runtime = info["runtime"]
-    active_session = info["active_session"] or {}
-    lines = [
-        render_buddy_scene(info, compact=True),
-        "",
-        "Commands",
-        "",
-        "- `/buddyhub:help`",
-        "- `/buddyhub:status`",
-        "- `/buddyhub:pause`",
-        "- `/buddyhub:resume`",
-        "- `/buddyhub:disable`",
-        "- `/buddyhub:open`",
-        "- `/buddyhub:uninstall`",
-        "- `/buddyhub:doctor`",
-        "- `/buddyhub:statusline-on`",
-        "- `/buddyhub:statusline-off`",
-        "",
-        "Runtime",
-        "",
-        f"- Active session: `{runtime.get('active_session_id') or 'none'}`",
-        f"- Project: `{active_session.get('project_name') or 'unknown'}`",
-        f"- Last update: `{runtime.get('updated_at') or 'none'}`",
-        f"- Data root: `{info['paths']['data_root']}`",
-        "",
-        "Status line",
-        "",
-        "BuddyHub uses Claude Code text surfaces as the primary UI.",
-        "The official Buddy's native reaction path is still experimental from a third-party plugin.",
-        "The optional status line script lives at:",
-        f"- `{info['paths']['statusline_script']}`",
-    ]
-    return "\n".join(lines)
+def apply_rehearsal_patch() -> dict[str, Any]:
+    ensure_ownership_manifest()
+    inspection = inspect_native_patch(create_manifest=True)
+    detection = inspection["detection"]
 
+    if not detection.get("target_detected"):
+        raise RuntimeError(detection.get("reason") or "No Claude Code target was detected.")
+    if not detection.get("profile_supported"):
+        raise RuntimeError(detection.get("reason") or "No supported patch profile is available.")
+    if not inspection.get("profile_match"):
+        raise RuntimeError(inspection.get("profile_match_reason") or "Patch profile does not match the current Buddy identity.")
 
-def diagnose() -> dict[str, Any]:
-    info = snapshot()
-    identity = info["runtime"].get("identity", {})
-    diagnostics = {
-        "ui_mode": "tui-first",
-        "lifecycle_state": info["runtime"].get("lifecycle_state"),
-        "current_state": info["runtime"].get("current_state"),
-        "statusline_enabled": info["runtime"].get("statusline_enabled", False),
-        "ownership_manifest_exists": OWNERSHIP_FILE.exists(),
-        "runtime_file_exists": RUNTIME_FILE.exists(),
-        "sessions_file_exists": SESSIONS_FILE.exists(),
-        "legacy_runtime_assets_present": any(
-            path.exists() for path in (LEGACY_PID_FILE, LEGACY_UI_REQUEST_FILE, LEGACY_LOG_FILE)
-        ),
-        "active_session_id": info["runtime"].get("active_session_id"),
-        "active_project": (info["active_session"] or {}).get("project_name"),
-        "identity_available": identity.get("available", False),
-        "identity_source": identity.get("source"),
-        "buddy_name": identity.get("name"),
-        "buddy_species": identity.get("species"),
-        "native_control_mode": NATIVE_CONTROL_STATUS["mode"],
-        "native_control_writable": NATIVE_CONTROL_STATUS["writable"],
-        "native_control_field": NATIVE_CONTROL_STATUS["field"],
-        "native_control_reason": NATIVE_CONTROL_STATUS["reason"],
+    target_path = Path(str(detection["target_path"]))
+    version = str(detection["target_version"])
+    profile = SUPPORTED_PATCH_PROFILES[version]
+    backup = ensure_native_backup(target_path, version)
+
+    patched_copy = rehearsal_copy_path(version)
+    patched_copy.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(target_path, patched_copy)
+    patched_copy.chmod(target_path.stat().st_mode)
+
+    patch_results = apply_patch_profile_to_binary(patched_copy, profile)
+    codesign_result = codesign_binary(patched_copy)
+    if not codesign_result["ok"]:
+        raise RuntimeError(codesign_result["output"] or "codesign failed")
+    launch_result = verify_binary_launch(patched_copy)
+    if not launch_result["ok"]:
+        raise RuntimeError(launch_result["output"] or "patched binary failed launch verification")
+
+    patch_state = load_native_patch_state()
+    patch_state["rehearsal"] = {
+        "applied_at": now_iso(),
+        "target_path": str(target_path),
+        "target_version": version,
+        "profile_id": profile["profile_id"],
+        "profile_species": profile["species"],
+        "backup_path": backup["backup_path"],
+        "source_sha1": backup["source_sha1"],
+        "patched_copy_path": str(patched_copy),
+        "patched_sha1": sha1_file(patched_copy),
+        "launch_check_output": launch_result["output"],
+        "mode": "rehearsal",
     }
-    diagnostics["claude_cli_available"] = shutil_which("claude") is not None
-    return diagnostics
+    save_native_patch_state(patch_state)
+
+    return {
+        "mode": "rehearsal",
+        "target_path": str(target_path),
+        "target_version": version,
+        "profile_id": profile["profile_id"],
+        "profile_description": profile["description"],
+        "profile_species": profile["species"],
+        "backup_path": backup["backup_path"],
+        "backup_created": backup["created"],
+        "patched_copy_path": str(patched_copy),
+        "patched_sha1": sha1_file(patched_copy),
+        "patch_results": patch_results,
+        "codesign": codesign_result,
+        "launch_check": launch_result,
+        "manual_visual_check_required": True,
+    }
 
 
-def shutil_which(binary: str) -> str | None:
-    for path_dir in os.environ.get("PATH", "").split(os.pathsep):
-        candidate = Path(path_dir) / binary
-        if candidate.exists() and os.access(candidate, os.X_OK):
-            return str(candidate)
-    return None
+def apply_installed_patch() -> dict[str, Any]:
+    ensure_ownership_manifest()
+    inspection = inspect_native_patch(create_manifest=True)
+    detection = inspection["detection"]
+
+    if not detection.get("target_detected"):
+        raise RuntimeError(detection.get("reason") or "No Claude Code target was detected.")
+    if not detection.get("profile_supported"):
+        raise RuntimeError(detection.get("reason") or "No supported patch profile is available.")
+    if not inspection.get("profile_match"):
+        raise RuntimeError(inspection.get("profile_match_reason") or "Patch profile does not match the current Buddy identity.")
+
+    target_path = Path(str(detection["target_path"]))
+    version = str(detection["target_version"])
+    profile = SUPPORTED_PATCH_PROFILES[version]
+    if inspection.get("target_appears_patched"):
+        raise RuntimeError(
+            "Installed visual patch already appears to be present on the detected Claude target. "
+            "Run restore first if you want to re-apply from a clean original binary."
+        )
+    backup = ensure_native_backup(target_path, version)
+
+    try:
+        patch_results = apply_patch_profile_to_binary(target_path, profile)
+        codesign_result = codesign_binary(target_path)
+        if not codesign_result["ok"]:
+            raise RuntimeError(codesign_result["output"] or "codesign failed")
+        launch_result = verify_binary_launch(target_path)
+        if not launch_result["ok"]:
+            raise RuntimeError(launch_result["output"] or "patched binary failed launch verification")
+    except Exception as exc:
+        restore_result = restore_binary_from_backup(target_path, Path(backup["backup_path"]))
+        raise RuntimeError(
+            f"Installed patch failed and backup restore was attempted: {exc}. "
+            f"Restore launch ok={restore_result['launch_check']['ok']}"
+        ) from exc
+
+    patch_state = load_native_patch_state()
+    patch_state["installed"] = {
+        "applied_at": now_iso(),
+        "target_path": str(target_path),
+        "target_version": version,
+        "profile_id": profile["profile_id"],
+        "profile_species": profile["species"],
+        "backup_path": backup["backup_path"],
+        "source_sha1": backup["source_sha1"],
+        "patched_sha1": sha1_file(target_path),
+        "launch_check_output": launch_result["output"],
+        "mode": "installed",
+    }
+    save_native_patch_state(patch_state)
+
+    return {
+        "mode": "installed",
+        "target_path": str(target_path),
+        "target_version": version,
+        "profile_id": profile["profile_id"],
+        "profile_description": profile["description"],
+        "profile_species": profile["species"],
+        "backup_path": backup["backup_path"],
+        "backup_created": backup["created"],
+        "patched_sha1": sha1_file(target_path),
+        "patch_results": patch_results,
+        "codesign": codesign_result,
+        "launch_check": launch_result,
+        "manual_visual_check_required": True,
+    }
+
+
+def restore_native_patch() -> dict[str, Any]:
+    ensure_ownership_manifest()
+    patch_state = load_native_patch_state()
+    rehearsal = patch_state.get("rehearsal") or {}
+    installed = patch_state.get("installed") or {}
+    removed_paths: list[str] = []
+    restored_target = None
+
+    patched_copy_path = rehearsal.get("patched_copy_path")
+    if patched_copy_path:
+        path = Path(patched_copy_path)
+        if path.exists():
+            path.unlink()
+            removed_paths.append(str(path))
+            try:
+                path.parent.rmdir()
+                removed_paths.append(str(path.parent))
+            except OSError:
+                pass
+
+    target_path = installed.get("target_path")
+    backup_path = installed.get("backup_path")
+    if target_path and backup_path:
+        target = Path(target_path)
+        backup = Path(backup_path)
+        if target.exists() and backup.exists():
+            restored_target = restore_binary_from_backup(target, backup)
+
+    patch_state["rehearsal"] = None
+    patch_state["installed"] = None
+    save_native_patch_state(patch_state)
+
+    return {
+        "removed_paths": removed_paths,
+        "backup_retained": bool((rehearsal.get("backup_path") or installed.get("backup_path"))),
+        "backup_path": rehearsal.get("backup_path") or installed.get("backup_path"),
+        "restored_target": restored_target,
+        "restored_at": now_iso(),
+    }

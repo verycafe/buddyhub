@@ -1,334 +1,138 @@
-# Buddy State Spec
+# Buddy Visual Element Spec
 
-- Status: Draft v0.1
+- Status: Draft v0.2
 - Derived from: [PRD.md](/Users/tvwoo/Projects/buddyhub/PRD.md)
 
 ## 1. Purpose
 
-Define the minimum state model for BuddyHub V1.
+Define the minimum visual-element model for BuddyHub.
 
 This spec covers:
 
-- Claude-observed runtime states
-- BuddyHub lifecycle states
-- mapping rules
-- state priority
-- fallback behavior
+- official Buddy identity inputs
+- native visual element targets
+- patchable visual slots
+- version-sensitive patch rules
+- visual verification rules
 
-This spec does not define:
+This spec does not cover:
 
-- final sprite art
-- exact file paths
-- MCP-based memory states
+- Claude runtime state
+- reaction/state machines
+- hook mappings
+- status line rendering
 
-## 2. Goals
+## 2. Core Rule
 
-BuddyHub must turn observable Claude Code behavior into a small, stable Buddy state machine.
+BuddyHub V1 must modify only the official Buddy's visual elements.
 
-The model must be:
+It must not redefine the product as:
 
-- easy to reason about
-- robust against partial failures
-- independent from undocumented Claude internals
-- explicit about the difference between runtime state and Buddy identity
+- a state tracker
+- a text Buddy
+- a status-line companion
 
-## 3. Inputs
+## 3. Identity Inputs
 
-BuddyHub V1 may use the following inputs:
+BuddyHub may use only verified identity inputs tied to the current user Buddy.
 
-- Claude Code hook events
-- hook event metadata
-- Claude session identity metadata when available
-- Claude transcript attachment metadata such as `companion_intro` when available
-- workspace or project identity when available
-- local state files written by BuddyHub
-- optional status line context
-- explicit command inspection requests
+Currently validated real inputs include:
 
-V1 must not require:
+- `name`
+- `species`
 
-- tmux
-- hidden Claude internal APIs
-- cloud services
+Unvalidated fields must remain unavailable until a real runtime source is proven.
 
-## 4. BuddyHub Lifecycle States
+These fields are known from research but are not yet treated as verified runtime inputs by default:
 
-BuddyHub itself has these lifecycle states:
+- `rarity`
+- `shiny`
+- `hat`
+- `eye`
+- `stats`
 
-- `installed`
-- `enabled`
-- `paused`
-- `disabled`
-- `error`
-- `uninstalled`
+## 4. Visual Targets
 
-### 4.1 Definitions
+BuddyHub targets the official native Buddy rendered by Claude Code in the bottom-right UI.
 
-- `installed`: plugin assets exist and BuddyHub is available
-- `enabled`: BuddyHub is active and allowed to update UI
-- `paused`: BuddyHub remains installed but stops automatic Buddy activity
-- `disabled`: BuddyHub is explicitly turned off by the user
-- `error`: BuddyHub encountered an internal failure; Claude Code must continue to work
-- `uninstalled`: BuddyHub is removed and no longer active
+The visual source of truth is the Claude Code executable for the current installed version.
 
-## 4.2 Session Ownership Model
+On the current macOS machine, the validated example target file is:
 
-BuddyHub V1 must treat state as session-scoped first, not globally flat.
+- `/Users/tvwoo/.local/share/claude/versions/2.1.92`
 
-Minimum model:
+This path is implementation-specific, not a guaranteed cross-platform contract.
 
-- one per-session state record
-- one active-session pointer for display purposes
+## 5. Native Visual Slots
 
-Each per-session state record should be attributable to:
+Current research and local binary inspection indicate the official Buddy visual system includes:
 
-- `session_id` when available
-- process or runtime instance identifier when available
-- workspace or project identity when available
+- per-species frame tables
+- hat/accessory mappings
+- eye-injected frame rendering
 
-Why this is required:
+Local binary symbols already found include:
 
-- multiple Claude Code sessions may coexist
-- a single global last-writer state is not reliable enough
+- `YS7`
+- `yj5`
+- `zo_()`
 
-## 4.3 Identity State Separation
+These are treated as native visual slots, not public APIs.
 
-BuddyHub V1 must treat `Buddy identity` and `Buddy runtime state` as separate data domains.
+## 6. Allowed Visual Modifications
 
-`Buddy runtime state` includes:
+V1 may modify:
 
-- idle
-- thinking
-- reading
-- coding
-- running
-- browsing
-- waiting
-- done
-- error
+- hat or top-row accessory elements
+- species frame details
+- eye-dependent visual details
+- other small visual embellishments that remain attached to the user's real Buddy
 
-`Buddy identity` includes fields such as:
+V1 must not:
 
-- name
-- species
-- rarity
-- shiny
-- hat
-- eye
-- stats
+- create a second Buddy body
+- replace the user's Buddy with a fabricated generic pet
+- introduce a separate visual surface and claim success
 
-Rules:
+## 7. Patch Rules
 
-- runtime state may be inferred from Claude activity
-- identity fields must only be populated from a real source tied to the current user Buddy
-- reverse-engineered schema is not itself a valid runtime source
-- unavailable identity fields must stay unavailable
+Any visual modification must obey all of the following:
 
-## 5. Claude Runtime States
+1. Patch only a version-matched target.
+2. Patch only a known pattern.
+3. Fail if the expected match count is wrong.
+4. Modify the smallest possible byte range.
+5. Re-sign or otherwise restore runnability when required by platform rules.
 
-V1 defines these visible Buddy states:
+## 8. Verification Rules
 
-- `idle`
-- `thinking`
-- `reading`
-- `coding`
-- `running`
-- `browsing`
-- `waiting`
-- `done`
-- `error`
+A visual patch counts as validated only when:
 
-## 6. Source-to-State Mapping
-
-### 6.1 Hook-driven mappings
-
-The initial state mapping should follow the current validated local prototype pattern:
-
-- `Read|Glob|Grep -> reading`
-- `Edit|Write|NotebookEdit -> coding`
-- `Bash -> running`
-- `WebFetch|WebSearch -> browsing`
-- `AskUserQuestion -> waiting`
-- `Task -> thinking` or `exploring-like thinking`
-- unknown tool activity -> `thinking`
-
-### 6.2 Non-tool mappings
-
-- `PostToolUse -> thinking`
-- `Stop -> done`
-- `Notification -> waiting`
-
-### 6.3 Session lifecycle mappings
-
-V1 must explicitly handle session lifecycle transitions.
-
-Required rules:
-
-- `SessionStart -> idle` or a short initialization state that resolves to `idle`
-- `SessionEnd -> idle` and mark the session inactive
-- a finished session must not continue driving the Buddy indefinitely
-
-If a session becomes unavailable without a clean end event:
-
-- the session must age out based on staleness rules
-
-### 6.4 Idle timeout
-
-If no state update is received within a configurable inactivity window, Buddy transitions to `idle`.
-
-V1 requirement:
-
-- idle timeout must exist
-- timeout value must be configurable later
-- timeout failure must not crash BuddyHub
-
-### 6.5 Stale state invalidation
-
-BuddyHub must invalidate stale session state.
-
-Required behavior:
-
-- stale runtime state must not survive forever
-- `done` and `waiting` states must eventually expire to `idle` if their source session is no longer active
-- if the active-session pointer refers to a missing or expired session, BuddyHub must select another valid session or fall back to `idle`
-
-This rule exists partly to protect against:
-
-- abrupt Claude exits
-- stale local files
-- transcript resets or session continuity breaks
-- `/clear`-like session resets that invalidate prior volatile context
-
-## 7. State Priority Rules
-
-When multiple candidate states exist, apply this order:
-
-1. lifecycle override states
-2. explicit error state
-3. transient interaction state
-4. active session Claude runtime state
-5. idle fallback
-
-### 7.1 Lifecycle override behavior
-
-- If BuddyHub is `paused`, UI must show `paused` or hide dynamic updates
-- If BuddyHub is `disabled`, UI must not continue active runtime reporting beyond explicit command output
-- If BuddyHub is in `error`, UI may show a degraded error indicator, but must not loop aggressively
-
-### 7.2 Transient UI states
-
-The UI may temporarily enter interaction-only states such as:
-
-- clicked
-- hovered
-- petted
-
-These must never overwrite lifecycle truth.
-
-They are display-only overlays.
-
-### 7.3 Active session selection
-
-V1 must define how one session becomes the display-driving session.
-
-Default rule:
-
-- if only one valid session exists, use it
-- if multiple valid sessions exist, use the most recently updated active session
-- if the user explicitly opens or inspects a session, that session may become the display-driving session until it expires or focus changes
-
-If no valid session can be selected:
-
-- fall back to `idle`
-
-## 8. State Persistence
-
-V1 must persist enough information to recover current state safely after short restarts.
-
-Minimum persisted fields:
-
-- current Buddy runtime state
-- last update timestamp
-- last known source event
-- BuddyHub lifecycle state
-- `session_id` when available
-- workspace or project identity when available
-- active-session pointer or equivalent
-- verified Buddy identity fields when available
-- provenance for each Buddy identity field
-
-Persistence requirements:
-
-- format must be machine-readable
-- writes must be low-cost
-- corrupt state must fail open
-- per-session records must not overwrite each other blindly
-
-### 8.1 Identity provenance requirement
-
-For every persisted Buddy identity field, BuddyHub should retain enough metadata to answer:
-
-- what field was read
-- where it came from
-- how trustworthy it is
-
-Minimum source labels may include:
-
-- `transcript_attachment`
-- `local_runtime`
-- `manual_override`
-- `unknown`
+1. the target binary is still runnable
+2. Claude Code starts successfully
+3. the bottom-right official Buddy visibly changes
+4. the change occurs on the official Buddy, not a parallel UI
+
+Text inspection alone is not enough.
 
 ## 9. Failure Behavior
 
-### 9.1 Invalid state data
+If any of the following occur:
 
-If state data is missing or malformed:
+- version mismatch
+- pattern mismatch
+- signature failure
+- launch failure
+- no visible official Buddy change
 
-- BuddyHub must not crash Claude Code
-- Buddy should fall back to `idle` or a safe blank state
-
-### 9.2 Missing hook events
-
-If hooks are unavailable or temporarily not firing:
-
-- BuddyHub must degrade gracefully
-- text surfaces may continue showing the last safe state until timeout
-- status line must remain optional and independent
-
-### 9.3 Session continuity breaks
-
-If session continuity breaks unexpectedly, for example because a session is reset or replaced:
-
-- BuddyHub must not keep trusting stale volatile state indefinitely
-- the affected session may be reinitialized as a new logical session
-- display should fall back to `idle` or another valid active session
-
-### 9.4 Text UI surface unavailable
-
-If one BuddyHub UI surface is unavailable:
-
-- lifecycle state may remain valid
-- Claude Code must continue unaffected
-- another text surface such as `/buddyhub:status` or `/buddyhub:open` must still work if possible
-
-### 9.5 Identity source unavailable
-
-If BuddyHub cannot read the current user's Buddy identity:
-
-- it may continue to show runtime state
-- it must explicitly mark identity as unavailable
-- it must not substitute a generic Buddy body, species, rarity, or name as if it were the user's Buddy
+BuddyHub must treat the patch as failed and stop.
 
 ## 10. Acceptance Criteria
 
 This spec is satisfied when:
 
-1. BuddyHub can represent the required lifecycle states.
-2. BuddyHub can represent the required Claude runtime states.
-3. Hook events can be mapped into Buddy states without undocumented APIs.
-4. Missing or corrupt state data does not break Claude Code.
-5. Idle fallback exists and works predictably.
-6. Multiple concurrent sessions do not blindly overwrite one another's state.
-7. Session start, end, and stale-session cleanup rules are defined and recover gracefully.
-8. Buddy identity and Buddy runtime state are handled as separate data domains.
+1. BuddyHub identifies a real official Buddy target.
+2. BuddyHub patches only native visual elements.
+3. BuddyHub preserves the user's Buddy identity.
+4. BuddyHub does not depend on runtime state logic.
+5. A patched binary copy shows a visible change on the official Buddy.

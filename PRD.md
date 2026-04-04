@@ -1,290 +1,194 @@
 # BuddyHub PRD
 
-- Status: Draft v0.3
-- Date: 2026-04-04
+- Status: Draft v0.4
+- Date: 2026-04-05
 - Repository: `verycafe/buddyhub`
 - Document owner: `verycafe`
 
 ## 1. 产品一句话
 
-BuddyHub 是一个面向 Claude Code 的 Buddy 增强插件。
+BuddyHub 是一个面向 Claude Code 官方 Buddy 的原生视觉增强项目。
 
-它的目标不是做一个平行的文字宠物，而是在不替换、不伪造用户当前 Claude Buddy 的前提下，增强 Claude Code 右下角官方 Buddy 的动态表现；同时它必须支持开启、关闭、安全卸载，并且不能影响用户正常使用 Claude Code。
+它的目标只有一个：
 
-## 2. 背景
+- 在不替换、不伪造用户当前 Buddy 的前提下，增强 Claude Code 右下角官方 Buddy 的视觉元素
 
-Claude Code 已公开支持：
+它当前明确不做：
 
-- plugins
-- plugin marketplaces
-- hooks
-- status line
-- MCP
+- Claude 工作状态驱动
+- 自定义平行 Buddy
+- 文字面板型“伪 Buddy UI”
 
-但当前公开文档没有确认第三方插件可以直接控制官方 Buddy 的内部动态状态。
+## 2. 当前事实
 
-本地研究进一步确认：
+当前已经确认：
 
-- Claude Code 本体内部确实存在原生 Buddy 控制链路
-- 本地 transcript 可读到真实 Buddy 身份字段 `name/species`
-- 当前环境 `claude auth status --json` 已确认 `apiProvider = firstParty`
-- 但目前还没有确认第三方插件可稳定写入官方 Buddy 的内部反应状态 `companionReaction`
-- 官方 Buddy 的动态链路目前更像是 Claude Code 本体内部 `_S7 -> Oo_ -> setAppState(companionReaction)` 的原生流程
-
-这意味着 BuddyHub 的真正目标仍然是“增强 Claude Code 内部原生 Buddy UI”，但在技术上必须先确认是否存在可用控制面；在此之前，任何文字视图都只能算诊断与研究工具，不能算产品完成。
+1. 用户真正关心的是 Claude Code 右下角已经存在的官方 Buddy。
+2. `~/.claude` 是用户配置、plugin、transcript 目录，不是官方 Buddy 视觉表的已确认存放位置。
+3. 当前 macOS 机器上，Claude Code 主二进制位于：
+   - `/Users/tvwoo/.local/share/claude/versions/2.1.92`
+4. 官方 Buddy 视觉表不是单独的外部 sprite 文件，而是嵌在 Claude Code 主二进制内部。
+5. 在工作区里的 Claude 二进制副本上，只改 Buddy 原生视觉表，就能让右下角官方 Buddy 的元素变化。
+6. 这条路径当前证明的是：
+   - 官方 Buddy 的视觉元素可被原生修改
+   - 但路径、实现和补丁方式都属于内部实现细节，不是公开稳定 API
 
 ## 3. 问题定义
 
-对于 Claude Code 用户，当前存在三个现实缺口：
+当前问题不是“怎么显示一个 Buddy”，而是：
 
-1. Claude 的工作状态虽然存在，但不够可视化。  
-用户知道 Claude 在“干活”，但很难一眼看出它当前是在思考、读文件、改代码、跑命令，还是在等待输入。
-
-2. 用户真正想增强的是右下角官方 Buddy。  
-如果产品改成另一套平行宠物或文字面板，就会偏离目标。
-
-3. 插件化产品常常忽略生命周期管理。  
-一个真正可用的 Buddy 产品必须同时解决：
-- 如何开启
-- 如何临时关闭
-- 如何恢复
-- 如何彻底清理卸载
-- 如何保证 Claude Code 本体始终可正常工作
+1. 如何只增强用户当前的官方 Buddy，而不是做第二套 UI。
+2. 如何只改视觉元素，不把产品重新定义成状态同步工具。
+3. 如何在不破坏 Claude Code 正常使用的前提下，安全地修改和恢复原生 Buddy 视觉。
 
 ## 4. 产品目标
 
 ### 4.1 核心目标
 
-1. 用户可以通过 Claude Code 的官方插件分发机制安装 BuddyHub。
-2. BuddyHub 的核心成功标准是增强 Claude Code 右下角官方 Buddy，而不是输出一套平行文字 Buddy。
-3. BuddyHub 必须优先读取用户当前 Claude Buddy 的真实身份信息。
-4. BuddyHub 必须支持显式开启和关闭。
-5. BuddyHub 必须支持安全、一键式卸载路径。
-6. BuddyHub 不能阻塞、破坏或显著拖慢 Claude Code 的正常工作。
-7. 第一版尽量不依赖远程服务，默认本地优先。
-8. BuddyHub 不得用自定义的通用 Buddy 替代用户当前 Claude Buddy。
-9. 文字命令与状态栏只能作为诊断或辅助面，不得被当作产品本体。
+1. BuddyHub 只以 Claude Code 右下角官方 Buddy 为目标对象。
+2. BuddyHub 只专注于官方 Buddy 的视觉元素增强。
+3. BuddyHub 必须保留用户当前 Buddy 身份，不得替换成 BuddyHub 自己定义的宠物。
+4. BuddyHub 必须支持安全备份、应用、恢复和卸载。
+5. BuddyHub 不能让 Claude Code 变得不可启动、不可恢复或难以回滚。
 
-### 4.2 非目标
+### 4.2 本阶段明确不做
 
-- 不把并行文字面板重新定义成“Buddy 产品本体”。
-- 不在 V1 里做多人协作、团队共享、云同步。
-- 不在 V1 里做复杂游戏化体系或皮肤商城。
-- 不在 V1 里要求用户使用 tmux。
-- 不在 V1 里强依赖 MCP 才能完成核心 Buddy 展示。
+- 不做 Claude 工作状态同步
+- 不做 `thinking / coding / running` 之类的状态驱动 Buddy
+- 不做 status line 作为产品主界面
+- 不做 hooks 作为产品主线
+- 不做平行文字 Buddy
+- 不把诊断命令面板当作主交付物
 
-## 5. 产品原则
+## 5. 核心原则
 
-### 5.1 非侵入
+### 5.1 官方 Buddy 优先
 
-BuddyHub 是 Claude Code 的增强层，不是主工作流接管者。
+BuddyHub 的产品对象始终是：
 
-要求：
+- 用户当前的官方 Claude Buddy
 
-- 不阻挡正文主区域
-- 不阻挡输入区
-- 默认低干扰
-- 所有自动化行为都可理解、可关闭
+不是：
 
-### 5.2 失败可退化
+- 自定义 ASCII 宠物
+- 外部桌宠
+- 文本替身 UI
 
-BuddyHub 的任何异常都不能影响 Claude Code 主体使用。
+### 5.2 只改视觉元素
 
-要求：
+BuddyHub 当前阶段只处理：
 
-- 诊断视图或状态栏异常时 Claude Code 仍能正常工作
-- hooks 异常时应快速失败并退出
-- 状态读取失败时回退为空状态，不阻塞会话
-- 任何可选功能都要支持 fail-open
+- 帽子
+- 顶部元素
+- 眼睛样式
+- 物种对应帧
+- 其他官方 Buddy 已存在或可补丁扩展的视觉元素
 
-### 5.3 用户控制权优先
+BuddyHub 当前阶段不处理：
 
-用户必须清楚知道：
+- Claude 工作状态
+- reaction
+- 内部动态状态机
 
-- BuddyHub 是否启用
-- 当前显示来自什么状态
-- 如何暂停
-- 如何恢复
-- 如何卸载
-- 数据保存在哪里
+### 5.3 安全优先
 
-### 5.4 本地优先
+任何原生修改都必须：
 
-V1 默认不要求：
+- 先备份
+- 后应用
+- 可恢复
+- 可验证
+- 可拒绝
 
-- 远程账户
-- 云数据库
-- 独立服务器
+如果版本不匹配、签名失败、模式不匹配或验证失败，BuddyHub 必须停止，而不是硬改。
 
-### 5.5 Buddy 身份保真优先
+### 5.4 不偷换核心体验
 
-BuddyHub 的核心对象是 `用户当前的 Claude Buddy`，不是 BuddyHub 自己定义的一只宠物。
+MVP 不能把产品偷换成：
 
-要求：
+- 文本状态工具
+- 诊断工具
+- status line 工具
+- 插件命令集合
 
-- 必须优先读取用户当前 Buddy 的真实身份信息
-- 增强应建立在真实 Buddy 之上，而不是替换成 BuddyHub 自定义形态
-- 未验证的字段必须明确标记为 `unknown` 或 `unavailable`
-- 不能把 reverse-engineered schema 当作当前用户真实值直接填充
-- 不能用通用 ASCII 宠物骨架冒充用户 Buddy 的原始外形
-
-### 5.6 核心体验不可被 MVP 偷换
-
-BuddyHub 的核心体验是：
-
-- 增强用户当前的官方 Claude Buddy
-
-因此：
-
-- MVP 可以砍外围功能
-- 但不能把产品偷换成文字管理面板
-- `/buddyhub:open` 或 `/buddyhub:status` 只能是辅助与诊断入口
-- 如果官方 Buddy 没有被增强，产品就不能被视为完成
+只有当右下角官方 Buddy 的视觉真的被增强时，产品才算命中主目标。
 
 ## 6. 目标用户
 
-### 6.1 主要用户
+主要用户是：
 
-- 高频使用 Claude Code 的个人开发者
-- 喜欢 Claude Buddy，但希望它更有动态反馈的用户
-- 希望获得轻量陪伴感，但讨厌侵入式工具的用户
-
-### 6.2 用户诉求
-
-- “我想增强的就是右下角那个官方 Buddy。”
-- “我希望它能更明显地反映 Claude 在干什么。”
-- “我不想看到另一套假的 Buddy UI。”
-- “我想要能随时关掉，不影响 Claude 本体。”
+- 已经在用 Claude Code 官方 Buddy 的用户
+- 想增强官方 Buddy 外观的用户
+- 不接受“再来一只新宠物”的用户
+- 希望修改可恢复、可回退的用户
 
 ## 7. 产品定义
 
-BuddyHub 是一个 `以官方 Claude Buddy 为核心对象的增强插件`。
+BuddyHub 当前阶段是一个 `官方 Buddy 原生视觉增强工具链`。
 
-它由以下六层组成：
+它由五层组成：
 
-1. `安装层`
-通过自建 marketplace 完成安装。
+1. `识别层`
+定位当前系统上的 Claude Code 安装与版本。
 
-2. `状态层`
-通过 Claude Code hooks 和本地运行信息感知 Claude 的当前工作状态。
+2. `身份层`
+读取用户当前 Buddy 的真实身份字段，至少包括已验证的 `name/species`。
 
-3. `身份层`
-读取用户当前 Claude Buddy 的真实身份信息，并记录字段来源与可信度。
+3. `原生视觉层`
+定位 Claude Code 主二进制里的官方 Buddy 视觉表，并对目标元素做最小修改。
 
-4. `官方控制层`
-负责找到并驱动 Claude Code 内部官方 Buddy 的可用控制面。
-
-当前已知：
-
-- 官方 Buddy 动态不是简单 transcript 字段
-- 其原生控制依赖 Claude Code 内部 app state
-- 目前尚未确认第三方插件能写入该 app state
+4. `备份恢复层`
+保证所有修改都可备份、恢复、验证和回滚。
 
 5. `诊断层`
-通过状态命令、详情命令和可选 status line 暴露调试与验证信息。
+只用于确认：
+- 当前 Buddy 身份
+- 当前安装路径
+- 当前版本
+- 当前 patch 是否生效
 
-6. `控制层`
-支持开启、关闭、恢复、状态查看和安全卸载。
+诊断层不是产品本体。
 
 ## 8. UI 定义
 
 ### 8.1 主 UI
 
-BuddyHub 的主 UI 目标是：
+BuddyHub 的主 UI 只有一个：
 
-- Claude Code 右下角已经存在的官方 Buddy
+- Claude Code 右下角官方 Buddy
 
-定义如下：
+### 8.2 本阶段允许的增强
 
-- 主用户可见 Buddy 必须是官方原生 Buddy
-- `/buddyhub:open` 与 `/buddyhub:status` 只作为诊断面
-- status line 只作为可选辅助面
-- 不依赖任何独立窗口能力
+本阶段允许的增强包括：
 
-### 8.2 目标体验
+- 顶部帽子/饰物
+- 物种轮廓小修饰
+- 眼睛或面部元素变化
+- 其他不改变 Buddy 身份的原生视觉元素
 
-目标体验应当是：
+### 8.3 本阶段不算交付的内容
 
-- 用户看向 Claude Code 右下角，就能看到官方 Buddy 的动态变化
-- BuddyHub 的增强建立在真实 Buddy 身份之上
-- 不出现第二套伪装成主产品的文字宠物
+以下都不算主体验完成：
 
-如果当前技术实现还做不到这一点：
+- `inspect / doctor / help` 这类诊断输出
+- 任何 status line 或文字诊断信息
+- 任何额外文字视图
 
-- 文字视图只能标记为诊断层
-- 不能把诊断层输出宣称为主体验
-- 项目状态必须明确标记为“研究/实验阶段”，不能伪装成主目标已完成
+这些最多只算诊断面。
 
-### 8.3 诊断详情视图
+## 9. 视觉与身份模型
 
-`/buddyhub:open` 打开详细诊断视图。
+### 9.1 身份字段
 
-它至少包含：
+BuddyHub 只允许使用真实来源字段。
 
-- 已验证的 Buddy 名称
-- 已验证的 Buddy identity 字段及来源
-- 当前状态
-- 最近一次状态变更时间
-- 当前项目信息
-- 当前是否启用
-- 当前官方控制面状态
-- 快捷操作入口
-
-规则：
-
-- 如果只确认到 `name/species`，就只显示这两个字段
-- 如果 `rarity/shiny/hat/eye/stats` 没有真实来源，就不能显示伪造值
-- 通用状态图标可以存在，但必须被表述为 `BuddyHub 诊断提示`
-
-### 8.4 可选状态栏同步
-
-BuddyHub 支持可选的 Claude Code status line 同步。
-
-目的：
-
-- 暴露支持性诊断信息
-- 在不同终端产品里保持一致的低干扰提示
-
-它不是主 Buddy 体验。
-
-## 9. 状态与身份模型
-
-### 9.1 BuddyHub 生命周期状态
-
-- `installed`
-- `enabled`
-- `paused`
-- `disabled`
-- `error`
-- `uninstalled`
-
-### 9.2 Claude 工作状态
-
-当前整理的工作状态语义至少包括：
-
-- `idle`
-- `thinking`
-- `reading`
-- `coding`
-- `running`
-- `browsing`
-- `waiting`
-- `done`
-- `error`
-
-这些状态只有真正驱动到官方 Buddy 时，才算满足核心目标。
-
-### 9.3 Buddy 身份字段
-
-BuddyHub V1 必须区分：
-
-- `工作状态字段`：由 hooks 和运行信号驱动
-- `Buddy 身份字段`：由用户当前 Claude Buddy 的真实来源驱动
-
-Buddy 身份字段示例：
+当前已确认可作为真实来源的字段：
 
 - `name`
 - `species`
+
+当前未确认稳定来源的字段：
+
 - `rarity`
 - `shiny`
 - `hat`
@@ -293,259 +197,131 @@ Buddy 身份字段示例：
 
 规则：
 
-- 只有存在真实来源的字段才能进入显示层
-- reverse-engineered schema 只用于兼容性理解，不能直接作为用户值
-- 字段必须记录来源，例如 transcript attachment、local runtime、reverse-engineered reference
+- 未确认字段不得伪造
+- reverse-engineered schema 只能作为研究参考，不能直接当用户真实值写入产品面
 
-## 10. 安装、启用、关闭、卸载
+### 9.2 视觉元素来源
 
-### 10.1 安装目标体验
+当前已确认官方 Buddy 视觉元素存在于 Claude Code 主二进制内部。
 
-目标安装路径：
+当前 macOS 机器上的已确认目标文件：
 
-```text
-/plugin marketplace add verycafe/buddyhub
-/plugin install buddyhub@buddyhub
-```
+- `/Users/tvwoo/.local/share/claude/versions/2.1.92`
 
-安装完成后，BuddyHub 进入 `installed + enabled` 或 `installed + paused` 的可预测状态。
+但这是当前环境的内部实现细节，不是跨平台稳定接口。
 
-但产品完成标准不是“文字命令能跑”，而是“官方 Buddy 增强路径真实生效”。
+## 10. 生命周期
 
-### 10.2 启用
+BuddyHub 当前阶段的生命周期应围绕原生补丁来设计：
 
-启用后的要求：
+1. detect
+2. backup
+3. patch
+4. verify
+5. restore
+6. uninstall
 
-- 状态监测开始生效
-- 诊断命令与可选 status line 可立即使用
-- 如官方 Buddy 控制面已接通，原生 Buddy 增强应同时生效
+### 10.1 Detect
 
-### 10.3 关闭
+必须识别：
 
-关闭后的要求：
+- 当前平台
+- 当前 Claude Code 安装类型
+- 当前 Claude Code 版本
+- 当前目标文件路径
 
-- 自动状态更新停止
-- 官方 Buddy 增强立即停止
-- Claude Code 主体行为保持不变
+### 10.2 Backup
 
-### 10.4 一键安全卸载
+应用任何补丁前，必须先备份原始目标文件。
 
-卸载后的要求：
+### 10.3 Patch
 
-- 清理 BuddyHub 写入的状态文件和缓存
-- 移除 BuddyHub 注册的 hooks、status line 或相关配置引用
-- 不破坏用户原有 Claude Code 配置
-- 不留下必须手工排查的残余状态
+补丁必须：
 
-### 10.5 恢复
+- 版本敏感
+- 模式敏感
+- 最小化
+- 仅修改目标元素
 
-用户关闭 BuddyHub 后，必须可以低成本重新启用，而不需要重新安装。
+### 10.4 Verify
 
-## 11. 安全与非干扰要求
+补丁后必须验证：
 
-### 11.1 不能影响 Claude Code 正常工作
+- 文件仍可运行
+- Claude Code 可启动
+- 官方 Buddy 视觉真的变化
 
-BuddyHub 不能：
+### 10.5 Restore
 
-- 阻塞 Claude 响应
-- 破坏 Claude 输入输出
-- 修改 Claude 的核心行为逻辑
-- 因自身异常导致 Claude 会话不可用
+恢复路径必须简单明确：
 
-### 11.2 Hook 安全要求
+- 恢复原始文件
+- 重新验证 Claude Code 正常启动
 
-所有 hooks 必须遵守：
+## 11. 安全要求
 
-- 快速执行
-- 可失败退出
-- 不因异常阻塞主流程
-- 不做 V1 必需性之外的重型操作
+BuddyHub 必须满足：
 
-### 11.3 诊断显示安全要求
+1. 不盲改系统文件
+2. 不在没有备份的情况下改动 Claude 二进制
+3. 不在版本不匹配时强行应用补丁
+4. 不覆盖用户无关配置
+5. 不把 `~/.claude/pet` 误当成官方 Buddy 控制面
+6. 不把实验性路径伪装成跨平台稳定方案
 
-BuddyHub 的诊断显示层必须是文本优先、可失败退化的。
+## 12. 当前技术判断
 
-要求：
+截至当前仓库状态：
 
-- status line 未配置时，命令界面仍可完整使用
-- 任一文本命令失败不影响 Claude Code 主流程
-- 不使用终端专属图形协议作为前置条件
+- 官方 Buddy 视觉增强是可行的
+- 当前已验证的可行路径是 `原生二进制视觉表补丁`
+- `状态驱动 Buddy` 不是当前阶段目标
+- `plugin + hooks + status line` 不是当前阶段主产品路线
 
-### 11.4 配置安全要求
+## 13. MVP 定义
 
-BuddyHub 对 Claude 配置的修改必须：
+BuddyHub 当前阶段的 MVP 定义是：
 
-- 可追踪
-- 可逆
-- 尽量命名空间隔离
-- 避免覆盖用户已有自定义设置
+1. 能识别当前用户的官方 Buddy 身份
+2. 能定位当前安装中的 Claude Code 主二进制
+3. 能安全备份原始文件
+4. 能对一个已验证的官方 Buddy 视觉元素做最小补丁
+5. 能验证右下角官方 Buddy 的视觉确实发生变化
+6. 能恢复原始文件
 
-### 11.5 数据安全要求
+只有满足以上 6 条，才算这个阶段的 MVP 成立。
 
-BuddyHub 必须清楚说明：
+## 14. 验收标准
 
-- 写入哪些本地文件
-- 写入路径在哪里
-- 哪些数据是缓存
-- 哪些数据会在卸载时删除
+### 14.1 必须满足
 
-BuddyHub 还必须区分：
+1. 改动发生在官方 Buddy 本体，而不是平行 UI。
+2. Buddy 视觉增强不依赖自定义状态系统。
+3. BuddyHub 不伪造用户 Buddy 身份。
+4. 备份、应用、恢复路径完整。
+5. Claude Code 在补丁后仍可正常启动。
 
-- BuddyHub 自己写入的运行时数据
-- Claude 自己拥有、BuddyHub 只读取的 Buddy 身份来源
+### 14.2 不计入完成
 
-BuddyHub 不能删除或篡改 Claude 自身的 Buddy 身份数据源。
+以下不计入本阶段完成：
 
-## 12. 技术方案要求
+- 文字诊断页好不好看
+- status line 有没有接上
+- hooks 是否完善
+- Claude 工作状态是否映射
+- reaction 是否可控
 
-### 12.1 分发
+## 15. 当前风险
 
-采用 Claude Code 官方支持的自建 marketplace 分发：
+1. 路径和目标文件可能随平台、版本、安装方式变化。
+2. 原生补丁需要处理代码签名与平台安全限制。
+3. 目标模式可能在新版本二进制里变化。
+4. 公开官方资料没有把这条路径定义成稳定扩展接口。
 
-- 仓库根目录放 `.claude-plugin/marketplace.json`
-- 插件主体放在 `plugins/buddyhub/`
-- 用户通过 marketplace 安装
+因此 BuddyHub 这一阶段必须被视为：
 
-### 12.2 核心组成
+- `native patch research and tooling`
 
-当前最小可行组成：
+而不是：
 
-- plugin commands 或 skills
-- hooks
-- Buddy identity reader
-- 官方 Buddy 控制面适配层
-- 本地状态文件
-- 可选 status line 脚本
-- 诊断视图
-
-### 12.3 不依赖 tmux
-
-如果后续支持 tmux，必须是兼容项，而不是前置条件。
-
-### 12.4 关于 MCP
-
-MCP 不是核心 Buddy 增强的前置条件。
-
-## 13. 命令设计方向
-
-命令设计应围绕“查看诊断状态”和“控制生命周期”。
-
-建议命令：
-
-- `/buddyhub:help`
-- `/buddyhub:status`
-- `/buddyhub:pause`
-- `/buddyhub:resume`
-- `/buddyhub:open`
-- `/buddyhub:doctor`
-
-说明：
-
-- `help`：展示命令和说明
-- `status`：展示诊断状态、已验证身份字段、启用状态和关键配置
-- `pause`：暂停 BuddyHub 自动运行
-- `resume`：恢复 BuddyHub 自动运行
-- `open`：打开详细诊断视图，并展示真实来源的 Buddy 字段与控制面状态
-- `doctor`：检查运行状态、配置和常见问题
-
-## 14. MVP 范围
-
-### 14.1 必须包含
-
-- 自建 marketplace 分发
-- 可安装 BuddyHub 插件
-- 面向官方 Buddy 的增强目标
-- 用户当前 Buddy 身份读取
-- `/buddyhub:status` 诊断视图
-- `/buddyhub:open` 详细诊断视图
-- 可选 status line 同步
-- 启用能力
-- 关闭能力
-- 清晰的安全卸载路径
-- 非侵入运行保证
-- 文档化的数据路径和配置路径
-
-补充说明：
-
-- 如果官方 Buddy 增强控制面还未打通，MVP 仍处于研究/实验状态
-- 文字诊断层不能单独算作产品完成
-
-### 14.2 可以延后
-
-- 复杂记忆系统
-- MCP 工具能力
-- 团队共享
-- 云同步
-- 游戏化成长系统
-- 多 Buddy 管理
-
-## 15. 用户流程
-
-### 15.1 首次安装
-
-1. 用户添加 marketplace
-2. 用户安装 BuddyHub
-3. 用户看到 BuddyHub 已成功启用或进入默认状态
-4. 用户能立即理解如何暂停、恢复和卸载
-
-### 15.2 正常使用
-
-1. 用户打开 Claude Code
-2. BuddyHub 读取 Claude 当前状态
-3. 官方 Buddy 在右下角以更明显的动态方式更新显示
-4. 用户需要时使用诊断命令查看细节
-
-### 15.3 用户临时关闭
-
-1. 用户执行暂停或关闭动作
-2. 官方 Buddy 增强立即停止
-3. Claude Code 使用体验恢复为无 BuddyHub 增强状态
-
-### 15.4 用户恢复使用
-
-1. 用户执行恢复动作
-2. BuddyHub 重新开始状态同步和增强
-
-### 15.5 用户卸载
-
-1. 用户执行官方或产品提供的卸载入口
-2. BuddyHub 停止所有运行组件
-3. BuddyHub 清理自身状态
-4. Claude Code 保持可正常使用
-
-## 16. 成功指标
-
-### 16.1 产品指标
-
-- 用户可在 5 分钟内完成安装并看到官方 Buddy 增强生效
-- 用户可在 30 秒内找到关闭 BuddyHub 的方式
-- 用户可在 30 秒内找到恢复 BuddyHub 的方式
-- 用户可在一次明确流程内完成卸载
-
-### 16.2 稳定性指标
-
-- BuddyHub 异常时，Claude Code 仍可正常使用
-- 官方 Buddy 状态切换可稳定工作
-- 诊断 UI 不形成明显资源占用问题
-- hooks 不引入可感知阻塞
-
-## 17. 风险与约束
-
-### 17.1 平台约束
-
-- 公开文档没有确认第三方插件可向 Claude Code 内部主 UI 写入官方 Buddy 的内部动态状态
-- 当前主要技术问题不是“有没有 Buddy schema”，而是“有没有第三方可达的官方 Buddy 控制面”
-- 当前本地研究还显示：即使 `apiProvider` 已是 `firstParty`，第三方插件仍未证明可达 `companionReaction` 写入路径
-
-### 17.2 产品风险
-
-- 如果把文字诊断层错当成产品本体，会直接偏离需求
-- 如果 Buddy 太活跃，会打扰用户
-- 如果关闭路径不够明确，用户会失去信任
-- 如果卸载不干净，产品会被视为不安全
-
-### 17.3 工程风险
-
-- hooks 设计不当可能拖慢主流程
-- 配置写入不谨慎可能污染用户 Claude 设置
-- 如果官方控制面只能通过非公开内部路径访问，后续版本兼容性会有风险
+- `stable public plugin integration`

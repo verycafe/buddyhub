@@ -2,72 +2,43 @@
 
 [中文说明](./README.zh-CN.md)
 
-BuddyHub is a Buddy enhancement plugin for Claude Code.
+BuddyHub is a native visual-enhancement project for the official Claude Code Buddy.
 
-BuddyHub is intended to enhance the user's current Claude Buddy, not replace it with a BuddyHub-defined pet.
+Its target is only the existing Buddy in the bottom-right Claude Code UI.
 
-Current product status:
+## Current Direction
 
-- BuddyHub can verify the current official Buddy identity
-- BuddyHub can track Claude-side runtime state
-- BuddyHub has not yet unlocked third-party native control of the official bottom-right Buddy
+BuddyHub is now focused on one problem only:
 
-Core product rule:
+- enhance the user's real official Buddy visual elements
 
-- the real target is the official Claude Code Buddy already shown in the bottom-right UI
-- text commands and status-line output are diagnostic/supporting surfaces only
-- text output alone does not count as product completion
+BuddyHub is not currently focused on:
 
-Current repo state:
+- Claude runtime state tracking
+- status-line-first UX
+- hook-driven Buddy behavior
+- parallel text Buddy products
 
-- hook-driven state tracking
-- verified Buddy identity reading
-- `/buddyhub:status` compact diagnostic view
-- `/buddyhub:open` detailed diagnostic view
-- optional Claude Code status line integration
-- safe pause, resume, disable, and uninstall flows
+## What We Have Already Proven
 
-Identity rule:
+- the official Buddy visual tables are embedded in the Claude Code executable
+- on the current macOS machine, the validated example binary is:
+  - `/Users/tvwoo/.local/share/claude/versions/2.1.92`
+- patching a workspace copy of that binary changed the official bottom-right Buddy itself
+- `~/.claude/pet` is not the main delivery path for the official Buddy visual enhancement goal
 
-- verified Buddy identity fields may be shown
-- unavailable Buddy identity fields must stay unavailable
-- BuddyHub must not fabricate a generic Buddy appearance and present it as the user's Buddy
+## Product Rule
 
-BuddyHub does not require:
+The product counts as successful only when the official Claude Code Buddy itself is visually enhanced.
 
-- external GUI windows
-- terminal-specific graphics
-- tmux
+Text output, diagnostics, or helper commands do not count as the product UI.
 
-## Install Goal
+## Current Repo Focus
 
-BuddyHub is designed to be installed through a Claude Code marketplace flow:
-
-```text
-/plugin marketplace add verycafe/buddyhub
-/plugin install buddyhub@buddyhub
-```
-
-## Main Commands
-
-- `/buddyhub:help`
-- `/buddyhub:status`
-- `/buddyhub:open`
-- `/buddyhub:pause`
-- `/buddyhub:resume`
-- `/buddyhub:disable`
-- `/buddyhub:doctor`
-- `/buddyhub:statusline-on`
-- `/buddyhub:statusline-off`
-- `/buddyhub:uninstall`
-
-## Status Line
-
-BuddyHub ships a status line script at:
-
-- [plugins/buddyhub/scripts/statusline.py](/Users/tvwoo/Projects/buddyhub/plugins/buddyhub/scripts/statusline.py)
-
-V1 does not auto-edit Claude Code settings. Use `/buddyhub:statusline-on` to get the script path, then wire it into Claude Code manually.
+- native Buddy visual research
+- version-sensitive binary patching
+- backup and restore safety
+- verification of official Buddy visual changes
 
 ## Docs
 
@@ -76,24 +47,11 @@ V1 does not auto-edit Claude Code settings. Use `/buddyhub:statusline-on` to get
 - [specs/README.md](/Users/tvwoo/Projects/buddyhub/specs/README.md)
 - [research/README.md](/Users/tvwoo/Projects/buddyhub/research/README.md)
 
-## Current State
+## Important Scope Note
 
-What is already in place:
+The currently validated native path is an implementation detail for the current machine and install.
 
-- marketplace manifest
-- plugin manifest
-- command surface
-- hook-driven state runtime
-- local testing guide
-- diagnostic text/status surfaces
-
-What still needs real-world verification:
-
-- a plugin-accessible control path to the official native Buddy
-- visible enhancement of the official bottom-right Buddy
-- real hook-to-native-Buddy state propagation
-- manual status line wiring
-- at least one cross-terminal smoke pass for diagnostic surfaces
+It is not yet documented as a stable public Claude Code API or a guaranteed cross-platform path.
 
 ## License
 

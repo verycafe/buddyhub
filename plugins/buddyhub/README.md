@@ -1,51 +1,31 @@
 # BuddyHub Plugin
 
-BuddyHub is a Buddy enhancement plugin for Claude Code.
+This plugin folder remains in the repository, but the active product direction has changed.
 
-It must enhance the user's current Claude Buddy identity rather than substituting a BuddyHub-defined generic pet.
+Current product focus:
 
-Current product status:
+- native visual enhancement of the official Claude Code Buddy
 
-- identity sync is verified from Claude transcripts
-- Claude-side runtime state tracking is implemented
-- native control of the official bottom-right Buddy remains experimental
+Not the current product focus:
 
-Important:
+- runtime-state-driven Buddy behavior
+- status-line-first UX
+- text Buddy surfaces as the main product
 
-- the product target is the official Claude Code Buddy already rendered in the bottom-right UI
-- the text commands below are diagnostic/supporting tools
-- they are not the primary Buddy experience
+## Important Scope Note
 
-## Included Surfaces
+The repository's current validated breakthrough is on the native Claude Code binary path, not on a public plugin UI path.
 
-- Hook-driven state tracking
-- Diagnostic status and detail commands
-- Lifecycle controls
-- Optional status line script
+That means:
 
-## Main Commands
+- plugin assets may still be useful for tooling and diagnostics
+- but the product target is the official bottom-right Buddy itself
+- text or plugin-only output does not satisfy the main product goal
 
-- `/buddyhub:help`
-- `/buddyhub:status`
-- `/buddyhub:pause`
-- `/buddyhub:resume`
-- `/buddyhub:disable`
-- `/buddyhub:open`
-- `/buddyhub:uninstall`
-- `/buddyhub:doctor`
-- `/buddyhub:statusline-on`
-- `/buddyhub:statusline-off`
+## Source of Truth
 
-## Data Location
+See:
 
-BuddyHub writes runtime data to:
-
-`~/.claude/plugins/data/buddyhub`
-
-## Notes
-
-- BuddyHub is designed to fail open: Claude Code should keep working if BuddyHub fails.
-- The status line script is provided, but this version does not auto-edit Claude Code settings; use `/buddyhub:statusline-on` to get the script path and wire it up manually.
-- Text output is diagnostic only and must not be mistaken for the finished Buddy product.
-- BuddyHub must not fabricate unavailable Buddy identity fields or present a generic body as the user's Buddy.
-- First-round manual verification is documented in [TESTING.md](/Users/tvwoo/Projects/buddyhub/TESTING.md).
+- [PRD.md](/Users/tvwoo/Projects/buddyhub/PRD.md)
+- [specs/README.md](/Users/tvwoo/Projects/buddyhub/specs/README.md)
+- [TESTING.md](/Users/tvwoo/Projects/buddyhub/TESTING.md)

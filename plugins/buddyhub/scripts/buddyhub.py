@@ -5,6 +5,7 @@ import argparse
 import json
 import subprocess
 import sys
+import shutil
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -12,19 +13,11 @@ sys.path.insert(0, str(Path(__file__).parent))
 from buddyhublib import (  # noqa: E402
     DATA_ROOT,
     PLUGIN_REF,
-    diagnose,
-    ensure_ownership_manifest,
-    human_status_report,
-    load_runtime,
+    apply_installed_patch,
+    apply_rehearsal_patch,
+    inspect_native_patch,
     now_iso,
-    read_hook_payload,
-    record_hook_event,
-    render_buddy_scene,
-    render_buddy_statusline,
-    set_lifecycle_state,
-    snapshot,
-    stop_legacy_runtime,
-    update_runtime_preferences,
+    restore_native_patch,
 )
 
 
@@ -33,131 +26,229 @@ def print_json(payload: dict) -> None:
 
 
 def cmd_help(_: argparse.Namespace) -> int:
-    print(human_status_report())
-    return 0
-
-
-def cmd_status(args: argparse.Namespace) -> int:
-    info = snapshot()
-    if args.json:
-        print_json(info)
-        return 0
-    print(render_buddy_scene(info, compact=True))
-    return 0
-
-
-def cmd_pause(_: argparse.Namespace) -> int:
-    runtime = set_lifecycle_state("paused")
-    print(
-        "\n".join(
-            [
-                "# BuddyHub Paused",
-                "",
-                f"- Lifecycle: `{runtime['lifecycle_state']}`",
-                "- Automatic Buddy updates are paused.",
-                "- Claude Code remains unaffected.",
-                "- Run `/buddyhub:resume` to turn BuddyHub back on.",
-            ]
-        )
-    )
-    return 0
-
-
-def cmd_resume(_: argparse.Namespace) -> int:
-    runtime = set_lifecycle_state("enabled")
-    print(
-        "\n".join(
-            [
-                "# BuddyHub Resumed",
-                "",
-                f"- Lifecycle: `{runtime['lifecycle_state']}`",
-                "- BuddyHub is active again.",
-                "- Use `/buddyhub:open` for the detailed text view.",
-            ]
-        )
-    )
-    return 0
-
-
-def cmd_disable(_: argparse.Namespace) -> int:
-    runtime = set_lifecycle_state("disabled")
-    print(
-        "\n".join(
-            [
-                "# BuddyHub Disabled",
-                "",
-                f"- Lifecycle: `{runtime['lifecycle_state']}`",
-                "- BuddyHub has been turned off without uninstalling files.",
-                "- Run `/buddyhub:resume` to enable it again.",
-            ]
-        )
-    )
-    return 0
-
-
-def cmd_open(_: argparse.Namespace) -> int:
-    info = snapshot()
-    print(render_buddy_scene(info))
-    return 0
-
-
-def cmd_doctor(args: argparse.Namespace) -> int:
-    payload = diagnose()
-    if args.json:
-        print_json(payload)
-        return 0
-
+    inspection = inspect_native_patch()
+    detection = inspection["detection"]
+    identity = inspection["identity"]
     lines = [
-        "# BuddyHub Doctor",
+        "# BuddyHub",
         "",
-        f"- UI mode: `{payload['ui_mode']}`",
-        f"- Lifecycle: `{payload['lifecycle_state']}`",
-        f"- Buddy state: `{payload['current_state']}`",
-        f"- Native control mode: `{payload['native_control_mode']}`",
-        f"- Native control writable: `{str(payload['native_control_writable']).lower()}`",
-        f"- Native control field: `{payload['native_control_field']}`",
-        f"- Identity available: `{str(payload['identity_available']).lower()}`",
-        f"- Buddy name: `{payload['buddy_name'] or 'unknown'}`",
-        f"- Buddy species: `{payload['buddy_species'] or 'unknown'}`",
-        f"- Identity source: `{payload['identity_source'] or 'unknown'}`",
-        f"- Status line sync: `{str(payload['statusline_enabled']).lower()}`",
-        f"- Legacy runtime assets present: `{str(payload['legacy_runtime_assets_present']).lower()}`",
-        f"- Claude CLI available: `{str(payload['claude_cli_available']).lower()}`",
-        f"- Ownership manifest exists: `{str(payload['ownership_manifest_exists']).lower()}`",
-        f"- Runtime file exists: `{str(payload['runtime_file_exists']).lower()}`",
-        f"- Sessions file exists: `{str(payload['sessions_file_exists']).lower()}`",
-        f"- Active session: `{payload['active_session_id'] or 'none'}`",
-        f"- Active project: `{payload['active_project'] or 'unknown'}`",
-        f"- Native control reason: {payload['native_control_reason']}",
+        "- Focus: native visual enhancement for the official bottom-right Claude Code Buddy.",
+        "- Out of scope for this phase: runtime state, hooks, status line, and parallel Buddy UIs.",
+        "- Current verified Buddy identity is preserved; BuddyHub does not invent a replacement pet.",
+        "",
+        "Commands",
+        "",
+        "- `/buddyhub:help`",
+        "- `/buddyhub:inspect`",
+        "- `/buddyhub:apply`",
+        "- `/buddyhub:restore`",
+        "- `/buddyhub:doctor`",
+        "- `/buddyhub:uninstall`",
+        "",
+        "Current detection",
+        "",
+        f"- Platform: `{detection['platform']}`",
+        f"- Target detected: `{str(detection['target_detected']).lower()}`",
+        f"- Target version: `{detection.get('target_version') or 'unknown'}`",
+        f"- Verified Buddy: `{identity.get('name') or 'unknown'} / {identity.get('species') or 'unknown'}`",
     ]
+    if detection.get("target_path"):
+        lines.append(f"- Target path: `{detection['target_path']}`")
+    if detection.get("reason"):
+        lines.append(f"- Detection note: {detection['reason']}")
     print("\n".join(lines))
     return 0
 
 
-def cmd_hook(args: argparse.Namespace) -> int:
-    try:
-        payload = read_hook_payload()
-        event_name = args.event or payload.get("hook_event_name") or "unknown"
-        record_hook_event(event_name, payload)
-    except Exception as exc:  # noqa: BLE001
-        print(f"BuddyHub hook degraded safely: {exc}", file=sys.stderr)
+def cmd_inspect(args: argparse.Namespace) -> int:
+    info = inspect_native_patch()
+    if args.json:
+        print_json(info)
+        return 0
+
+    detection = info["detection"]
+    identity = info["identity"]
+    backup = info["backup"] or {}
+    lines = [
+        "# BuddyHub Inspect",
+        "",
+        f"- Platform: `{detection['platform']}`",
+        f"- Target detected: `{str(detection['target_detected']).lower()}`",
+        f"- Detection mode: `{detection.get('detection_mode') or 'unknown'}`",
+        f"- Target version: `{detection.get('target_version') or 'unknown'}`",
+        f"- Patch profile supported: `{str(detection.get('profile_supported', False)).lower()}`",
+        f"- Patch profile: `{detection.get('profile_id') or 'none'}`",
+        f"- Patch target species: `{detection.get('profile_species') or 'unknown'}`",
+        f"- Verified Buddy name: `{identity.get('name') or 'unknown'}`",
+        f"- Verified Buddy species: `{identity.get('species') or 'unknown'}`",
+        f"- Profile matches current Buddy: `{str(info['profile_match']).lower()}`",
+    ]
+    if detection.get("target_path"):
+        lines.append(f"- Target path: `{detection['target_path']}`")
+    if detection.get("target_sha1"):
+        lines.append(f"- Target sha1: `{detection['target_sha1']}`")
+    if backup.get("backup_path"):
+        lines.append(f"- Backup path: `{backup['backup_path']}`")
+    lines.append(f"- Rehearsal copy exists: `{str(info['rehearsal_exists']).lower()}`")
+    if info.get("rehearsal_path"):
+        lines.append(f"- Rehearsal copy path: `{info['rehearsal_path']}`")
+    lines.extend(
+        [
+            "",
+            "Profile match note",
+            "",
+            info["profile_match_reason"],
+        ]
+    )
+    print("\n".join(lines))
+    return 0
+
+
+def cmd_apply(args: argparse.Namespace) -> int:
+    if args.target == "installed":
+        result = apply_installed_patch()
+    else:
+        result = apply_rehearsal_patch()
+    if args.json:
+        print_json(result)
+        return 0
+
+    lines = [
+        "# BuddyHub Apply",
+        "",
+        f"- Mode: `{result['mode']}`",
+        f"- Target version: `{result['target_version']}`",
+        f"- Target path: `{result['target_path']}`",
+        f"- Patch profile: `{result['profile_id']}`",
+        f"- Patch target species: `{result['profile_species']}`",
+        f"- Backup created: `{str(result['backup_created']).lower()}`",
+        f"- Backup path: `{result['backup_path']}`",
+        f"- Patched target sha1: `{result['patched_sha1']}`",
+        f"- Launch verification: `{str(result['launch_check']['ok']).lower()}`",
+    ]
+    if result.get("patched_copy_path"):
+        lines.append(f"- Patched copy: `{result['patched_copy_path']}`")
+    if result["launch_check"].get("output"):
+        lines.extend(
+            [
+                "",
+                "## Launch output",
+                "",
+                "```text",
+                result["launch_check"]["output"],
+                "```",
+            ]
+        )
+    lines.extend(
+        [
+            "",
+            "## Next step",
+            "",
+        ]
+    )
+    if result["mode"] == "rehearsal":
+        lines.extend(
+            [
+                "- This command patches a rehearsal copy only. It does not modify your installed Claude Code binary.",
+                f"- Launch `{result['patched_copy_path']}` manually and verify the official bottom-right Buddy visually changed.",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "- This command patched the detected Claude Code target directly after creating a backup.",
+                "- Restart Claude Code and visually verify the official bottom-right Buddy changed.",
+                "- Use `/buddyhub:restore` if you want to roll the target back to the original binary.",
+            ]
+        )
+    print("\n".join(lines))
+    return 0
+
+
+def cmd_restore(args: argparse.Namespace) -> int:
+    result = restore_native_patch()
+    if args.json:
+        print_json(result)
+        return 0
+
+    lines = [
+        "# BuddyHub Restore",
+        "",
+        f"- Removed paths: `{len(result['removed_paths'])}`",
+        f"- Backup retained: `{str(result['backup_retained']).lower()}`",
+        f"- Backup path: `{result.get('backup_path') or 'none'}`",
+    ]
+    if result["removed_paths"]:
+        lines.extend(
+            [
+                "",
+                "## Removed",
+                "",
+                *[f"- `{path}`" for path in result["removed_paths"]],
+            ]
+        )
+    print("\n".join(lines))
+    return 0
+
+
+def cmd_doctor(args: argparse.Namespace) -> int:
+    payload = inspect_native_patch()
+    if args.json:
+        print_json(payload)
+        return 0
+
+    detection = payload["detection"]
+    identity = payload["identity"]
+    rehearsal = (payload["patch_state"] or {}).get("rehearsal") or {}
+    lines = [
+        "# BuddyHub Doctor",
+        "",
+        f"- Platform: `{detection['platform']}`",
+        f"- Target detected: `{str(detection['target_detected']).lower()}`",
+        f"- Target path: `{detection.get('target_path') or 'unknown'}`",
+        f"- Target version: `{detection.get('target_version') or 'unknown'}`",
+        f"- Target sha1: `{detection.get('target_sha1') or 'unknown'}`",
+        f"- Profile supported: `{str(detection.get('profile_supported', False)).lower()}`",
+        f"- Profile id: `{detection.get('profile_id') or 'none'}`",
+        f"- Profile species: `{detection.get('profile_species') or 'unknown'}`",
+        f"- Verified Buddy name: `{identity.get('name') or 'unknown'}`",
+        f"- Verified Buddy species: `{identity.get('species') or 'unknown'}`",
+        f"- Identity source: `{identity.get('source') or 'unknown'}`",
+        f"- Profile matches current Buddy: `{str(payload['profile_match']).lower()}`",
+        f"- Rehearsal copy exists: `{str(payload['rehearsal_exists']).lower()}`",
+        f"- Rehearsal copy path: `{payload.get('rehearsal_path') or 'none'}`",
+        f"- Installed patch present: `{str(bool((payload.get('patch_state') or {}).get('installed'))).lower()}`",
+        f"- Backup path: `{(payload.get('backup') or {}).get('backup_path') or 'none'}`",
+        f"- Patch state file: `{payload['patch_state_file']}`",
+        f"- Data root: `{payload['data_root']}`",
+        f"- Backup root: `{payload['backup_root']}`",
+        f"- Work root: `{payload['work_root']}`",
+        f"- Claude CLI available: `{str(shutil.which('claude') is not None).lower()}`",
+    ]
+    if detection.get("reason"):
+        lines.append(f"- Detection note: {detection['reason']}")
+    if rehearsal.get("launch_check_output"):
+        lines.extend(
+            [
+                "",
+                "## Rehearsal launch output",
+                "",
+                "```text",
+                rehearsal["launch_check_output"],
+                "```",
+            ]
+        )
+    lines.extend(["", "## Profile match note", "", payload["profile_match_reason"]])
+    print("\n".join(lines))
     return 0
 
 
 def cmd_uninstall(args: argparse.Namespace) -> int:
-    set_lifecycle_state("disabled")
-    stop_legacy_runtime()
-    removed_paths = []
+    restore_result = restore_native_patch()
+    removed_paths = list(restore_result["removed_paths"])
     if DATA_ROOT.exists():
-        for path in sorted(DATA_ROOT.iterdir(), reverse=True):
-            if path.is_file():
-                path.unlink(missing_ok=True)
-                removed_paths.append(str(path))
-        try:
-            DATA_ROOT.rmdir()
-            removed_paths.append(str(DATA_ROOT))
-        except OSError:
-            pass
+        shutil.rmtree(DATA_ROOT)
+        removed_paths.append(str(DATA_ROOT))
 
     uninstall_result = {
         "attempted_plugin_uninstall": False,
@@ -185,6 +276,7 @@ def cmd_uninstall(args: argparse.Namespace) -> int:
         print_json(
             {
                 "removed_paths": removed_paths,
+                "restore_result": restore_result,
                 "cleanup_completed_at": now_iso(),
                 **uninstall_result,
             }
@@ -196,6 +288,8 @@ def cmd_uninstall(args: argparse.Namespace) -> int:
         "",
         "- BuddyHub runtime cleanup completed.",
         f"- Removed paths: `{len(removed_paths)}`",
+        f"- Rehearsal backup retained: `{str(restore_result['backup_retained']).lower()}`",
+        f"- Rehearsal backup path: `{restore_result.get('backup_path') or 'none'}`",
     ]
 
     if uninstall_result["attempted_plugin_uninstall"]:
@@ -218,76 +312,29 @@ def cmd_uninstall(args: argparse.Namespace) -> int:
     print("\n".join(lines))
     return 0
 
-
-def cmd_statusline_on(_: argparse.Namespace) -> int:
-    runtime = update_runtime_preferences(statusline_enabled=True)
-    info = snapshot()
-    print(
-        "\n".join(
-            [
-                "# BuddyHub Status Line Requested",
-                "",
-                f"- Status line sync: `{str(runtime.get('statusline_enabled', False)).lower()}`",
-                "- BuddyHub will provide status line output via the script below.",
-                "- To surface it in Claude Code, point your Claude Code status line command at this script:",
-                f"- `{info['paths']['statusline_script']}`",
-            ]
-        )
-    )
-    return 0
-
-
-def cmd_statusline_off(_: argparse.Namespace) -> int:
-    runtime = update_runtime_preferences(statusline_enabled=False)
-    print(
-        "\n".join(
-            [
-                "# BuddyHub Status Line Disabled",
-                "",
-                f"- Status line sync: `{str(runtime.get('statusline_enabled', False)).lower()}`",
-                "- BuddyHub will no longer report status line mode as requested.",
-            ]
-        )
-    )
-    return 0
-
-
-def cmd_statusline(_: argparse.Namespace) -> int:
-    info = snapshot()
-    print(render_buddy_statusline(info))
-    return 0
-
-
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="BuddyHub runtime controller")
+    parser = argparse.ArgumentParser(description="BuddyHub native Buddy patch helper")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     help_parser = subparsers.add_parser("help")
     help_parser.set_defaults(func=cmd_help)
 
-    status_parser = subparsers.add_parser("status")
-    status_parser.add_argument("--json", action="store_true")
-    status_parser.set_defaults(func=cmd_status)
+    inspect_parser = subparsers.add_parser("inspect")
+    inspect_parser.add_argument("--json", action="store_true")
+    inspect_parser.set_defaults(func=cmd_inspect)
 
-    pause_parser = subparsers.add_parser("pause")
-    pause_parser.set_defaults(func=cmd_pause)
+    apply_parser = subparsers.add_parser("apply")
+    apply_parser.add_argument("--target", choices=("rehearsal", "installed"), default="rehearsal")
+    apply_parser.add_argument("--json", action="store_true")
+    apply_parser.set_defaults(func=cmd_apply)
 
-    resume_parser = subparsers.add_parser("resume")
-    resume_parser.set_defaults(func=cmd_resume)
-
-    disable_parser = subparsers.add_parser("disable")
-    disable_parser.set_defaults(func=cmd_disable)
-
-    open_parser = subparsers.add_parser("open")
-    open_parser.set_defaults(func=cmd_open)
+    restore_parser = subparsers.add_parser("restore")
+    restore_parser.add_argument("--json", action="store_true")
+    restore_parser.set_defaults(func=cmd_restore)
 
     doctor_parser = subparsers.add_parser("doctor")
     doctor_parser.add_argument("--json", action="store_true")
     doctor_parser.set_defaults(func=cmd_doctor)
-
-    hook_parser = subparsers.add_parser("hook")
-    hook_parser.add_argument("event")
-    hook_parser.set_defaults(func=cmd_hook)
 
     uninstall_parser = subparsers.add_parser("uninstall")
     uninstall_parser.add_argument("--skip-plugin-remove", action="store_true")
@@ -295,23 +342,17 @@ def build_parser() -> argparse.ArgumentParser:
     uninstall_parser.add_argument("--json", action="store_true")
     uninstall_parser.set_defaults(func=cmd_uninstall)
 
-    statusline_on_parser = subparsers.add_parser("statusline-on")
-    statusline_on_parser.set_defaults(func=cmd_statusline_on)
-
-    statusline_off_parser = subparsers.add_parser("statusline-off")
-    statusline_off_parser.set_defaults(func=cmd_statusline_off)
-
-    statusline_parser = subparsers.add_parser("statusline")
-    statusline_parser.set_defaults(func=cmd_statusline)
-
     return parser
 
 
 def main() -> int:
-    ensure_ownership_manifest()
     parser = build_parser()
     args = parser.parse_args()
-    return int(args.func(args))
+    try:
+        return int(args.func(args))
+    except Exception as exc:  # noqa: BLE001
+        print(f"BuddyHub error: {exc}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

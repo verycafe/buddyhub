@@ -4,14 +4,14 @@
     "name": "verycafe"
   },
   "metadata": {
-    "description": "Experimental diagnostics for official Claude Code Buddy identity and native control-path research.",
-    "version": "0.1.8"
+    "description": "Experimental native visual patch tooling for the official Claude Code Buddy.",
+    "version": "0.1.9"
   },
   "plugins": [
     {
       "name": "buddyhub",
-      "description": "Experimental diagnostics for official Claude Code Buddy identity and native control-path research.",
-      "version": "0.1.8",
+      "description": "Experimental native visual patch tooling for the official Claude Code Buddy.",
+      "version": "0.1.9",
       "author": {
         "name": "verycafe"
       },
