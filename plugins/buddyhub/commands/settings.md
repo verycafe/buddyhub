@@ -10,5 +10,6 @@ allowed-tools: Bash(python3:*)
 Present the command output directly to the user.
 - Preserve headings, bullets, file paths, booleans, and code formatting.
 - Do not paraphrase, summarize, or add commentary before or after it.
-- Do not pretend unsupported color or nickname settings are active.
+- Do not pretend unsupported color settings are active.
+- Nickname is only active when the output explicitly says it can apply through the Claude runtime config.
 - Do not call any additional tools.

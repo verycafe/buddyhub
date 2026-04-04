@@ -16,6 +16,10 @@ PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 CLAUDE_CONFIG_ROOT = Path.home() / ".claude"
 CLAUDE_PROJECTS_ROOT = CLAUDE_CONFIG_ROOT / "projects"
 CLAUDE_VERSIONS_ROOT = Path.home() / ".local" / "share" / "claude" / "versions"
+CLAUDE_JSON_FILE = Path(
+    os.environ.get("BUDDYHUB_CLAUDE_JSON")
+    or (Path.home() / ".claude.json")
+)
 DATA_ROOT = Path(
     os.environ.get("CLAUDE_PLUGIN_DATA_DIR")
     or os.environ.get("BUDDYHUB_DATA_ROOT")
@@ -26,6 +30,7 @@ NATIVE_PATCH_STATE_FILE = DATA_ROOT / "native-patch.json"
 CUSTOMIZATION_SETTINGS_FILE = DATA_ROOT / "customization-settings.json"
 NATIVE_BACKUP_ROOT = DATA_ROOT / "native-backups"
 NATIVE_WORK_ROOT = DATA_ROOT / "native-work"
+CONFIG_BACKUP_ROOT = DATA_ROOT / "config-backups"
 
 PLUGIN_REF = "buddyhub@buddyhub"
 
@@ -248,6 +253,24 @@ def write_json(path: Path, payload: Any) -> None:
         tmp_path.unlink(missing_ok=True)
 
 
+def write_json_document(path: Path, payload: Any) -> None:
+    fd, tmp_name = tempfile.mkstemp(
+        prefix=f"{path.name}.",
+        suffix=".tmp",
+        dir=str(path.parent),
+    )
+    tmp_path = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(json.dumps(payload, indent=2, ensure_ascii=False))
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        tmp_path.replace(path)
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+
 def sha1_file(path: Path) -> str:
     digest = hashlib.sha1()
     with path.open("rb") as handle:
@@ -288,9 +311,11 @@ def ensure_ownership_manifest() -> dict[str, Any]:
             "runtime_assets": [
                 str(NATIVE_BACKUP_ROOT),
                 str(NATIVE_WORK_ROOT),
+                str(CONFIG_BACKUP_ROOT),
             ],
             "config_integrations": {
                 "native_patch_target": None,
+                "companion_name_source": str(CLAUDE_JSON_FILE),
             },
         }
         write_json(OWNERSHIP_FILE, manifest)
@@ -299,6 +324,12 @@ def ensure_ownership_manifest() -> dict[str, Any]:
         for owned_path in (str(OWNERSHIP_FILE), str(NATIVE_PATCH_STATE_FILE), str(CUSTOMIZATION_SETTINGS_FILE)):
             if owned_path not in owned_files:
                 owned_files.append(owned_path)
+        runtime_assets = manifest.setdefault("runtime_assets", [])
+        for runtime_path in (str(NATIVE_BACKUP_ROOT), str(NATIVE_WORK_ROOT), str(CONFIG_BACKUP_ROOT)):
+            if runtime_path not in runtime_assets:
+                runtime_assets.append(runtime_path)
+        config_integrations = manifest.setdefault("config_integrations", {})
+        config_integrations["companion_name_source"] = str(CLAUDE_JSON_FILE)
         write_json(OWNERSHIP_FILE, manifest)
     return manifest
 
@@ -407,6 +438,7 @@ def customization_support(
     detection: dict[str, Any],
     identity: dict[str, Any],
     settings: dict[str, Any],
+    companion_config: dict[str, Any],
 ) -> dict[str, Any]:
     profile, profile_reason = select_patch_profile(detection, identity, settings)
     selected_element = ELEMENT_CATALOG[settings["element_id"]]
@@ -452,11 +484,11 @@ def customization_support(
             }
         )
 
-    nickname_supported = bool(profile and profile.get("nickname_supported"))
+    nickname_supported = bool(companion_config.get("available"))
     nickname_reason = (
-        "Verified native label patch exists for the selected profile."
+        f"BuddyHub can update the displayed companion name through `{companion_config['path']}`."
         if nickname_supported
-        else "No verified native label patch point exists for the current target."
+        else "No verified companion config file with a writable `companion.name` field was found."
     )
 
     can_apply = profile is not None
@@ -510,6 +542,37 @@ def empty_identity() -> dict[str, Any]:
         "rarity": None,
         "shiny": None,
     }
+
+
+def read_companion_config() -> dict[str, Any]:
+    path = CLAUDE_JSON_FILE
+    result = {
+        "path": str(path),
+        "exists": path.exists(),
+        "available": False,
+        "name": None,
+        "personality": None,
+        "reason": None,
+    }
+    if not path.exists():
+        result["reason"] = "Claude runtime config file was not found."
+        return result
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        result["reason"] = f"Could not read Claude runtime config: {exc}"
+        return result
+    companion = data.get("companion")
+    if not isinstance(companion, dict):
+        result["reason"] = "Claude runtime config does not contain a companion object."
+        return result
+    name = companion.get("name")
+    result["name"] = name
+    result["personality"] = companion.get("personality")
+    result["available"] = isinstance(name, str) and bool(name.strip())
+    if not result["available"]:
+        result["reason"] = "Claude runtime config does not expose a usable companion.name field."
+    return result
 
 
 def read_companion_intro(transcript_path: str | None) -> dict[str, Any] | None:
@@ -592,6 +655,82 @@ def current_identity_from_projects() -> dict[str, Any]:
             identity["transcript_path"] = str(path)
             return identity
     return empty_identity()
+
+
+def ensure_companion_config_backup(config_path: Path) -> dict[str, Any]:
+    ensure_data_root()
+    CONFIG_BACKUP_ROOT.mkdir(parents=True, exist_ok=True)
+    source_sha1 = sha1_file(config_path)
+    backup_path = CONFIG_BACKUP_ROOT / f"{config_path.name}.{source_sha1}.bak"
+    created = False
+    if not backup_path.exists():
+        shutil.copy2(config_path, backup_path)
+        created = True
+    return {
+        "backup_path": str(backup_path),
+        "created": created,
+        "source_sha1": source_sha1,
+    }
+
+
+def apply_companion_name_override(config_path: Path, nickname: str) -> dict[str, Any]:
+    backup = ensure_companion_config_backup(config_path)
+    data = json.loads(config_path.read_text(encoding="utf-8"))
+    companion = data.setdefault("companion", {})
+    if not isinstance(companion, dict):
+        raise RuntimeError("Claude runtime config companion field is not an object.")
+    previous_name = companion.get("name")
+    companion["name"] = nickname
+    write_json_document(config_path, data)
+    return {
+        "config_path": str(config_path),
+        "backup_path": backup["backup_path"],
+        "backup_created": backup["created"],
+        "source_sha1": backup["source_sha1"],
+        "previous_name": previous_name,
+        "applied_name": nickname,
+        "current_sha1": sha1_file(config_path),
+    }
+
+
+def restore_companion_config_from_backup(config_path: Path, backup_path: Path) -> dict[str, Any]:
+    shutil.copy2(backup_path, config_path)
+    return {
+        "config_path": str(config_path),
+        "backup_path": str(backup_path),
+        "restored_sha1": sha1_file(config_path),
+    }
+
+
+def sync_companion_name_override(
+    *,
+    inspection: dict[str, Any],
+    applied_settings: dict[str, Any],
+) -> dict[str, Any] | None:
+    config_info = inspection.get("companion_config") or {}
+    config_path_value = config_info.get("path")
+    if not config_path_value:
+        return None
+    config_path = Path(str(config_path_value))
+    if not config_path.exists():
+        return None
+    desired_name = normalize_nickname(applied_settings.get("nickname"))
+    installed = (inspection.get("patch_state") or {}).get("installed") or {}
+    previous_patch = installed.get("companion_name_patch") or {}
+    previous_backup = previous_patch.get("backup_path")
+
+    if desired_name:
+        result = apply_companion_name_override(config_path, desired_name)
+        result["mode"] = "applied"
+        return result
+
+    if previous_backup:
+        backup_path = Path(str(previous_backup))
+        if backup_path.exists():
+            result = restore_companion_config_from_backup(config_path, backup_path)
+            result["mode"] = "restored"
+            return result
+    return None
 
 
 def detect_native_target() -> dict[str, Any]:
@@ -890,9 +1029,10 @@ def inspect_native_patch(*, create_manifest: bool = False) -> dict[str, Any]:
         ensure_ownership_manifest()
     detection = detect_native_target()
     identity = current_identity_from_projects()
+    companion_config = read_companion_config()
     settings = load_customization_settings()
     patch_state = load_native_patch_state()
-    customization = customization_support(detection, identity, settings)
+    customization = customization_support(detection, identity, settings, companion_config)
     selected_profile = customization.get("profile")
 
     rehearsal = patch_state.get("rehearsal") or {}
@@ -936,6 +1076,7 @@ def inspect_native_patch(*, create_manifest: bool = False) -> dict[str, Any]:
     return {
         "detection": detection,
         "identity": identity,
+        "companion_config": companion_config,
         "settings": settings,
         "customization": customization,
         "backup": backup,
@@ -1039,6 +1180,7 @@ def apply_rehearsal_patch() -> dict[str, Any]:
         "codesign": codesign_result,
         "launch_check": launch_result,
         "manual_visual_check_required": True,
+        "companion_name_patch": None,
     }
 
 
@@ -1063,6 +1205,10 @@ def apply_installed_patch() -> dict[str, Any]:
         backup_path = resolve_patch_base_backup(inspection, target_path, version)
         backup = backup_metadata_from_path(backup_path) if backup_path else None
         launch_result = verify_binary_launch(target_path)
+        companion_name_patch = sync_companion_name_override(
+            inspection=inspection,
+            applied_settings=customization["effective_settings"],
+        )
         patch_state = load_native_patch_state()
         patch_state["installed"] = {
             "applied_at": now_iso(),
@@ -1076,6 +1222,7 @@ def apply_installed_patch() -> dict[str, Any]:
             "source_sha1": backup["source_sha1"] if backup else None,
             "patched_sha1": sha1_file(target_path),
             "launch_check_output": launch_result["output"],
+            "companion_name_patch": companion_name_patch,
             "mode": "installed",
         }
         save_native_patch_state(patch_state)
@@ -1103,6 +1250,7 @@ def apply_installed_patch() -> dict[str, Any]:
             "launch_check": launch_result,
             "manual_visual_check_required": False,
             "already_present": True,
+            "companion_name_patch": companion_name_patch,
         }
     target_restored_from_backup = False
     if target_status.get("status") == "mixed":
@@ -1129,6 +1277,10 @@ def apply_installed_patch() -> dict[str, Any]:
         launch_result = verify_binary_launch(target_path)
         if not launch_result["ok"]:
             raise RuntimeError(launch_result["output"] or "patched binary failed launch verification")
+        companion_name_patch = sync_companion_name_override(
+            inspection=inspection,
+            applied_settings=customization["effective_settings"],
+        )
     except Exception as exc:
         restore_result = restore_binary_from_backup(target_path, Path(backup["backup_path"]))
         raise RuntimeError(
@@ -1149,6 +1301,7 @@ def apply_installed_patch() -> dict[str, Any]:
         "source_sha1": backup["source_sha1"],
         "patched_sha1": sha1_file(target_path),
         "launch_check_output": launch_result["output"],
+        "companion_name_patch": companion_name_patch,
         "mode": "installed",
     }
     save_native_patch_state(patch_state)
@@ -1171,6 +1324,7 @@ def apply_installed_patch() -> dict[str, Any]:
         "codesign": codesign_result,
         "launch_check": launch_result,
         "manual_visual_check_required": True,
+        "companion_name_patch": companion_name_patch,
     }
 
 
@@ -1202,6 +1356,16 @@ def restore_native_patch() -> dict[str, Any]:
         if target.exists() and backup.exists():
             restored_target = restore_binary_from_backup(target, backup)
 
+    restored_companion_name = None
+    companion_name_patch = installed.get("companion_name_patch") or {}
+    config_path_value = companion_name_patch.get("config_path")
+    config_backup_value = companion_name_patch.get("backup_path")
+    if config_path_value and config_backup_value:
+        config_path = Path(str(config_path_value))
+        config_backup = Path(str(config_backup_value))
+        if config_path.exists() and config_backup.exists():
+            restored_companion_name = restore_companion_config_from_backup(config_path, config_backup)
+
     patch_state["rehearsal"] = None
     patch_state["installed"] = None
     save_native_patch_state(patch_state)
@@ -1211,5 +1375,6 @@ def restore_native_patch() -> dict[str, Any]:
         "backup_retained": bool((rehearsal.get("backup_path") or installed.get("backup_path"))),
         "backup_path": rehearsal.get("backup_path") or installed.get("backup_path"),
         "restored_target": restored_target,
+        "restored_companion_name": restored_companion_name,
         "restored_at": now_iso(),
     }

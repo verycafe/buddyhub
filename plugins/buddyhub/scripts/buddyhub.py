@@ -76,6 +76,7 @@ def cmd_help(_: argparse.Namespace) -> int:
     inspection = inspect_native_patch()
     detection = inspection["detection"]
     identity = inspection["identity"]
+    companion_config = inspection["companion_config"]
     settings = inspection["settings"]
     customization = inspection["customization"]
     current_profile = inspection.get("current_profile") or {}
@@ -103,6 +104,7 @@ def cmd_help(_: argparse.Namespace) -> int:
         f"- Target detected: `{str(detection['target_detected']).lower()}`",
         f"- Target version: `{detection.get('target_version') or 'unknown'}`",
         f"- Verified Buddy: `{identity.get('name') or 'unknown'} / {identity.get('species') or 'unknown'}`",
+        f"- Current display name source: `{companion_config.get('name') or 'unknown'}` from `{companion_config.get('path')}`",
         f"- Saved element: `{settings.get('element_id') or 'none'}`",
         f"- Saved color: `{settings.get('color_id') or 'none'}`",
         f"- Saved nickname: `{settings.get('nickname') or 'none'}`",
@@ -141,6 +143,7 @@ def cmd_settings(args: argparse.Namespace) -> int:
     inspection = inspect_native_patch()
     detection = inspection["detection"]
     identity = inspection["identity"]
+    companion_config = inspection["companion_config"]
     customization = inspection["customization"]
     current_profile = inspection.get("current_profile") or {}
     preview_lines = preview_lines_for_customization(customization)
@@ -150,6 +153,7 @@ def cmd_settings(args: argparse.Namespace) -> int:
             {
                 "settings": settings,
                 "identity": identity,
+                "companion_config": companion_config,
                 "detection": detection,
                 "customization": customization_for_json(customization),
                 "current_profile": current_profile,
@@ -166,6 +170,8 @@ def cmd_settings(args: argparse.Namespace) -> int:
         f"- Name: `{identity.get('name') or 'unknown'}`",
         f"- Species: `{identity.get('species') or 'unknown'}`",
         f"- Identity source: `{identity.get('source') or 'unknown'}`",
+        f"- Current displayed name: `{companion_config.get('name') or 'unknown'}`",
+        f"- Name config path: `{companion_config.get('path')}`",
         "",
         "## Current selection",
         "",
@@ -225,8 +231,8 @@ def cmd_settings(args: argparse.Namespace) -> int:
             "",
             "## Nickname",
             "",
-            f"- Supported on current target: `{str(customization['nickname_supported']).lower()}`",
-            f"- Note: {customization['nickname_reason']}",
+        f"- Supported on current target: `{str(customization['nickname_supported']).lower()}`",
+        f"- Note: {customization['nickname_reason']}",
         ]
     )
 
@@ -287,6 +293,7 @@ def cmd_inspect(args: argparse.Namespace) -> int:
 
     detection = info["detection"]
     identity = info["identity"]
+    companion_config = info["companion_config"]
     settings = info["settings"]
     customization = info["customization"]
     current_profile = info.get("current_profile") or {}
@@ -303,6 +310,8 @@ def cmd_inspect(args: argparse.Namespace) -> int:
         f"- Default profile: `{detection.get('profile_id') or 'none'}`",
         f"- Verified Buddy name: `{identity.get('name') or 'unknown'}`",
         f"- Verified Buddy species: `{identity.get('species') or 'unknown'}`",
+        f"- Current displayed name: `{companion_config.get('name') or 'unknown'}`",
+        f"- Name config path: `{companion_config.get('path')}`",
         f"- Saved element: `{settings.get('element_id') or 'none'}`",
         f"- Saved color: `{settings.get('color_id') or 'none'}`",
         f"- Saved nickname: `{settings.get('nickname') or 'none'}`",
@@ -368,6 +377,12 @@ def cmd_apply(args: argparse.Namespace) -> int:
         f"- Patched target sha1: `{result['patched_sha1']}`",
         f"- Launch verification: `{str(result['launch_check']['ok']).lower()}`",
     ]
+    companion_name_patch = result.get("companion_name_patch") or {}
+    if companion_name_patch:
+        lines.append(f"- Displayed name sync: `{companion_name_patch.get('mode')}`")
+        lines.append(f"- Display name config: `{companion_name_patch.get('config_path')}`")
+        if companion_name_patch.get("applied_name"):
+            lines.append(f"- Applied display name: `{companion_name_patch['applied_name']}`")
     if result.get("already_present"):
         lines.append("- Target already matched the selected official Buddy element. BuddyHub refreshed its installed patch record to match the actual binary on disk.")
     if result.get("target_restored_from_backup"):
@@ -439,6 +454,8 @@ def cmd_restore(args: argparse.Namespace) -> int:
         f"- Backup retained: `{str(result['backup_retained']).lower()}`",
         f"- Backup path: `{result.get('backup_path') or 'none'}`",
     ]
+    if result.get("restored_companion_name"):
+        lines.append(f"- Restored display name config: `{result['restored_companion_name']['config_path']}`")
     if result["removed_paths"]:
         lines.extend(
             [
@@ -462,6 +479,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
     detection = payload["detection"]
     identity = payload["identity"]
+    companion_config = payload["companion_config"]
     settings = payload["settings"]
     customization = payload["customization"]
     current_profile = payload.get("current_profile") or {}
@@ -480,6 +498,8 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         f"- Verified Buddy name: `{identity.get('name') or 'unknown'}`",
         f"- Verified Buddy species: `{identity.get('species') or 'unknown'}`",
         f"- Identity source: `{identity.get('source') or 'unknown'}`",
+        f"- Current displayed name: `{companion_config.get('name') or 'unknown'}`",
+        f"- Name config path: `{companion_config.get('path')}`",
         f"- Saved element: `{settings.get('element_id') or 'none'}`",
         f"- Saved color: `{settings.get('color_id') or 'none'}`",
         f"- Saved nickname: `{settings.get('nickname') or 'none'}`",
