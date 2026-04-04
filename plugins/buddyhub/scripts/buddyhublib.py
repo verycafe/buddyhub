@@ -404,18 +404,23 @@ def customization_support(
 
     can_apply = profile is not None
     blockers: list[str] = []
+    warnings: list[str] = []
+    effective_settings = dict(settings)
     if profile is None:
         blockers.append(profile_reason)
         can_apply = False
     if selected_color and not any(item["selected"] and item["available"] for item in color_options):
-        blockers.append(f"Selected color `{selected_color['label']}` is not validated for the current target.")
-        can_apply = False
+        warnings.append(
+            f"Selected color `{selected_color['label']}` is not validated for the current target and will not be applied."
+        )
+        effective_settings["color_id"] = None
     if selected_nickname and not nickname_supported:
-        blockers.append("Nickname display is not verified for the current target.")
-        can_apply = False
+        warnings.append("Nickname display is not verified for the current target and will not be applied.")
+        effective_settings["nickname"] = None
 
     return {
         "settings": settings,
+        "effective_settings": effective_settings,
         "profile": profile,
         "profile_reason": profile_reason,
         "element_options": element_options,
@@ -427,6 +432,7 @@ def customization_support(
         "selected_nickname": selected_nickname,
         "can_apply": can_apply,
         "apply_blockers": blockers,
+        "apply_warnings": warnings,
     }
 
 
@@ -859,11 +865,16 @@ def inspect_native_patch(*, create_manifest: bool = False) -> dict[str, Any]:
         backup = existing_native_backup(Path(detection["target_path"]), str(detection["target_version"]))
 
     profile_match = customization["can_apply"]
-    profile_match_reason = (
-        "Current saved customization maps to a verified patch profile."
-        if customization["can_apply"]
-        else "; ".join(customization["apply_blockers"] or [customization["profile_reason"]])
-    )
+    if customization["can_apply"]:
+        if customization.get("apply_warnings"):
+            profile_match_reason = (
+                "Supported saved customization can be applied, but some unsupported settings will remain pending: "
+                + "; ".join(customization["apply_warnings"])
+            )
+        else:
+            profile_match_reason = "Current saved customization maps to a verified patch profile."
+    else:
+        profile_match_reason = "; ".join(customization["apply_blockers"] or [customization["profile_reason"]])
 
     return {
         "detection": detection,
@@ -942,7 +953,8 @@ def apply_rehearsal_patch() -> dict[str, Any]:
         "target_version": version,
         "profile_id": profile["profile_id"],
         "profile_species": profile["species"],
-        "settings": inspection["settings"],
+        "saved_settings": inspection["settings"],
+        "effective_settings": customization["effective_settings"],
         "backup_path": backup["backup_path"],
         "source_sha1": backup["source_sha1"],
         "patched_copy_path": str(patched_copy),
@@ -959,7 +971,9 @@ def apply_rehearsal_patch() -> dict[str, Any]:
         "profile_id": profile["profile_id"],
         "profile_description": profile["description"],
         "profile_species": profile["species"],
-        "settings": inspection["settings"],
+        "settings": customization["effective_settings"],
+        "saved_settings": inspection["settings"],
+        "apply_warnings": customization.get("apply_warnings") or [],
         "backup_path": backup["backup_path"],
         "backup_created": backup["created"],
         "patched_copy_path": str(patched_copy),
@@ -1032,7 +1046,8 @@ def apply_installed_patch() -> dict[str, Any]:
         "target_version": version,
         "profile_id": profile["profile_id"],
         "profile_species": profile["species"],
-        "settings": inspection["settings"],
+        "saved_settings": inspection["settings"],
+        "effective_settings": customization["effective_settings"],
         "backup_path": backup["backup_path"],
         "source_sha1": backup["source_sha1"],
         "patched_sha1": sha1_file(target_path),
@@ -1048,7 +1063,9 @@ def apply_installed_patch() -> dict[str, Any]:
         "profile_id": profile["profile_id"],
         "profile_description": profile["description"],
         "profile_species": profile["species"],
-        "settings": inspection["settings"],
+        "settings": customization["effective_settings"],
+        "saved_settings": inspection["settings"],
+        "apply_warnings": customization.get("apply_warnings") or [],
         "backup_path": backup["backup_path"],
         "backup_created": backup["created"],
         "patched_sha1": sha1_file(target_path),

@@ -114,6 +114,8 @@ def cmd_help(_: argparse.Namespace) -> int:
         lines.append(f"- Target path: `{detection['target_path']}`")
     if customization.get("apply_blockers"):
         lines.append(f"- Apply note: {'; '.join(customization['apply_blockers'])}")
+    elif customization.get("apply_warnings"):
+        lines.append(f"- Apply note: {'; '.join(customization['apply_warnings'])}")
     elif customization.get("profile_reason"):
         lines.append(f"- Apply note: {customization['profile_reason']}")
     print("\n".join(lines))
@@ -170,6 +172,9 @@ def cmd_settings(args: argparse.Namespace) -> int:
         f"- Element: `{settings.get('element_id') or 'none'}`",
         f"- Color: `{settings.get('color_id') or 'none'}`",
         f"- Nickname: `{settings.get('nickname') or 'none'}`",
+        f"- Effective element on apply: `{customization['effective_settings'].get('element_id') or 'none'}`",
+        f"- Effective color on apply: `{customization['effective_settings'].get('color_id') or 'none'}`",
+        f"- Effective nickname on apply: `{customization['effective_settings'].get('nickname') or 'none'}`",
         "",
         "## Apply status",
         "",
@@ -183,6 +188,9 @@ def cmd_settings(args: argparse.Namespace) -> int:
     blockers = customization.get("apply_blockers") or []
     if blockers:
         lines.extend(["", "## Current blockers", "", *[f"- {blocker}" for blocker in blockers]])
+    warnings = customization.get("apply_warnings") or []
+    if warnings:
+        lines.extend(["", "## Pending unsupported settings", "", *[f"- {warning}" for warning in warnings]])
 
     lines.extend(
         [
@@ -284,6 +292,9 @@ def cmd_inspect(args: argparse.Namespace) -> int:
         f"- Saved color: `{settings.get('color_id') or 'none'}`",
         f"- Saved nickname: `{settings.get('nickname') or 'none'}`",
         f"- Selected customization can apply: `{str(info['profile_match']).lower()}`",
+        f"- Effective element on apply: `{customization['effective_settings'].get('element_id') or 'none'}`",
+        f"- Effective color on apply: `{customization['effective_settings'].get('color_id') or 'none'}`",
+        f"- Effective nickname on apply: `{customization['effective_settings'].get('nickname') or 'none'}`",
         f"- Selected target patch status: `{selected_target_status.get('status') or 'unknown'}`",
     ]
     if current_profile.get("profile_id"):
@@ -308,6 +319,8 @@ def cmd_inspect(args: argparse.Namespace) -> int:
             info["profile_match_reason"],
         ]
     )
+    if customization.get("apply_warnings"):
+        lines.extend(["", "Pending unsupported settings", "", *[f"- {warning}" for warning in customization["apply_warnings"]]])
     print("\n".join(lines))
     return 0
 
@@ -329,9 +342,12 @@ def cmd_apply(args: argparse.Namespace) -> int:
         f"- Target path: `{result['target_path']}`",
         f"- Patch profile: `{result['profile_id']}`",
         f"- Patch target species: `{result['profile_species']}`",
-        f"- Selected element: `{result['settings'].get('element_id') or 'none'}`",
-        f"- Selected color: `{result['settings'].get('color_id') or 'none'}`",
-        f"- Selected nickname: `{result['settings'].get('nickname') or 'none'}`",
+        f"- Saved element: `{result['saved_settings'].get('element_id') or 'none'}`",
+        f"- Saved color: `{result['saved_settings'].get('color_id') or 'none'}`",
+        f"- Saved nickname: `{result['saved_settings'].get('nickname') or 'none'}`",
+        f"- Applied element: `{result['settings'].get('element_id') or 'none'}`",
+        f"- Applied color: `{result['settings'].get('color_id') or 'none'}`",
+        f"- Applied nickname: `{result['settings'].get('nickname') or 'none'}`",
         f"- Backup created: `{str(result['backup_created']).lower()}`",
         f"- Backup path: `{result['backup_path']}`",
         f"- Patched target sha1: `{result['patched_sha1']}`",
@@ -352,6 +368,8 @@ def cmd_apply(args: argparse.Namespace) -> int:
                 "```",
             ]
         )
+    if result.get("apply_warnings"):
+        lines.extend(["", "## Pending unsupported settings", "", *[f"- {warning}" for warning in result["apply_warnings"]]])
     lines.extend(
         [
             "",
@@ -437,6 +455,9 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         f"- Saved color: `{settings.get('color_id') or 'none'}`",
         f"- Saved nickname: `{settings.get('nickname') or 'none'}`",
         f"- Selected customization can apply: `{str(payload['profile_match']).lower()}`",
+        f"- Effective element on apply: `{customization['effective_settings'].get('element_id') or 'none'}`",
+        f"- Effective color on apply: `{customization['effective_settings'].get('color_id') or 'none'}`",
+        f"- Effective nickname on apply: `{customization['effective_settings'].get('nickname') or 'none'}`",
         f"- Selected profile id: `{(customization.get('profile') or {}).get('profile_id') or 'none'}`",
         f"- Selected target patch status: `{selected_target_status.get('status') or 'unknown'}`",
         f"- Current installed Buddy element: `{current_profile.get('element_id') or 'none'}`",
@@ -467,6 +488,8 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     lines.extend(["", "## Apply note", "", payload["profile_match_reason"]])
     if customization.get("apply_blockers"):
         lines.extend(["", "## Apply blockers", "", *[f"- {blocker}" for blocker in customization["apply_blockers"]]])
+    if customization.get("apply_warnings"):
+        lines.extend(["", "## Pending unsupported settings", "", *[f"- {warning}" for warning in customization["apply_warnings"]]])
     print("\n".join(lines))
     return 0
 
@@ -515,12 +538,16 @@ def cmd_hook(args: argparse.Namespace) -> int:
             return 0
 
         result = apply_installed_patch()
+        warning_suffix = ""
+        if result.get("apply_warnings"):
+            warning_suffix = " Some saved settings remain pending: " + "; ".join(result["apply_warnings"])
         emit_hook_response(
             suppress_output=False,
             system_message=(
                 "BuddyHub auto-applied the saved official Buddy customization "
                 f"(`{result['settings'].get('element_id') or 'none'}`) to the detected Claude Code target. "
                 "Ask the user to restart Claude Code to see the updated bottom-right Buddy."
+                + warning_suffix
             ),
         )
     except Exception as exc:  # noqa: BLE001
