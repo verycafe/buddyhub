@@ -1,6 +1,6 @@
 {
   "name": "buddyhub",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Reactive TUI Buddy for Claude Code with lifecycle controls and safe cleanup.",
   "author": {
     "name": "verycafe"
