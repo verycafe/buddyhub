@@ -7,6 +7,7 @@ import signal
 import sys
 import tempfile
 import time
+import textwrap
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -499,7 +500,7 @@ def update_runtime_preferences(**changes: Any) -> dict[str, Any]:
 
 def display_state(runtime: dict[str, Any]) -> str:
     lifecycle = str(runtime.get("lifecycle_state", "enabled"))
-    if lifecycle in {"paused", "disabled"}:
+    if lifecycle in {"paused", "disabled", "error"}:
         return lifecycle
     state = str(runtime.get("current_state", "idle"))
     if state in BUDDY_EXPRESSIONS:
@@ -511,15 +512,30 @@ def buddy_expression(runtime: dict[str, Any]) -> dict[str, str]:
     return BUDDY_EXPRESSIONS[display_state(runtime)]
 
 
+def render_buddy_bubble(runtime: dict[str, Any], *, compact: bool = False) -> list[str]:
+    expression = buddy_expression(runtime)
+    width = 20 if compact else 26
+    wrapped: list[str] = []
+    for raw in (expression["headline"], expression["subtitle"]):
+        wrapped.extend(textwrap.wrap(raw, width=width) or [""])
+
+    bubble_width = max(len(line) for line in wrapped)
+    cap = "-" * (bubble_width + 2)
+    lines = [f"      .{cap}."]
+    for line in wrapped:
+        lines.append(f"      | {line:<{bubble_width}} |")
+    lines.append(f"      '{cap}'")
+    return lines
+
+
 def render_buddy_sprite(runtime: dict[str, Any]) -> list[str]:
     expression = buddy_expression(runtime)
     return [
-        "      .-''''-.",
-        f"     /  {expression['eyes']:^5}  \\",
-        f"    |   {expression['accent']:^3}   |",
-        f"    |  {expression['mouth']:^5}  |",
-        f"     \\  {expression['paw']:^3}  /",
-        "     '-.__.-'",
+        r"        /\___/\\",
+        f"       ( {expression['eyes']:^5} )",
+        f"       /  {expression['accent']:^3}  \\",
+        f"      /  {expression['mouth']:^5}  \\",
+        f"      \\__ {expression['paw']:^3} __/",
     ]
 
 
@@ -532,16 +548,24 @@ def render_buddy_scene(info: dict[str, Any], *, compact: bool = False) -> str:
     name = runtime.get("buddy_name", "Buddy")
     project = active_session.get("project_name")
     last_event = runtime.get("last_event") or "none"
+    lifecycle = runtime.get("lifecycle_state", "enabled")
+    identity_line = (
+        "Identity: "
+        f"`{identity.get('species') or 'unknown'}` | "
+        f"`{identity.get('rarity') or 'unknown'}`"
+        if identity.get("available")
+        else "Identity sync is not available in V1."
+    )
 
     lines = [
         "# BuddyHub",
         "",
-        expression["headline"],
-        expression["subtitle"],
+        *render_buddy_bubble(runtime, compact=compact),
         "",
         *render_buddy_sprite(runtime),
         "",
-        f"{name} is {state}.",
+        f"{name}",
+        f"`{state}` | `{lifecycle}`",
     ]
 
     if project:
@@ -552,14 +576,7 @@ def render_buddy_scene(info: dict[str, Any], *, compact: bool = False) -> str:
     lines.append(f"Recent event: `{last_event}`")
 
     if not compact:
-        if identity.get("available"):
-            lines.append(
-                "Identity: "
-                f"`{identity.get('species') or 'unknown'}` | "
-                f"`{identity.get('rarity') or 'unknown'}`"
-            )
-        else:
-            lines.append("Identity sync is not available in V1.")
+        lines.append(identity_line)
 
         if runtime.get("statusline_enabled", False):
             lines.append("Status line sync is on.")
@@ -567,13 +584,16 @@ def render_buddy_scene(info: dict[str, Any], *, compact: bool = False) -> str:
         lines.extend(
             [
                 "",
-                "Try: `/buddyhub:status` `/buddyhub:pause` `/buddyhub:doctor`",
+                "Quick actions:",
+                "- `/buddyhub:status`",
+                "- `/buddyhub:pause`",
+                "- `/buddyhub:doctor`",
             ]
         )
     else:
         lines.extend(
             [
-                f"Lifecycle: `{runtime.get('lifecycle_state', 'enabled')}`",
+                identity_line,
                 f"Status line sync: `{str(runtime.get('statusline_enabled', False)).lower()}`",
             ]
         )
@@ -619,20 +639,9 @@ def human_status_report() -> str:
     runtime = info["runtime"]
     active_session = info["active_session"] or {}
     lines = [
-        "# BuddyHub Status",
+        render_buddy_scene(info, compact=True),
         "",
-        f"- Lifecycle: `{runtime.get('lifecycle_state', 'unknown')}`",
-        f"- Buddy state: `{runtime.get('current_state', 'idle')}`",
-        f"- Buddy name: `{runtime.get('buddy_name', 'Buddy')}`",
-        "- UI mode: `tui-first`",
-        f"- Status line sync: `{str(runtime.get('statusline_enabled', False)).lower()}`",
-        f"- Active session: `{runtime.get('active_session_id') or 'none'}`",
-        f"- Project: `{active_session.get('project_name') or 'unknown'}`",
-        f"- Last event: `{runtime.get('last_event') or 'none'}`",
-        f"- Last update: `{runtime.get('updated_at') or 'none'}`",
-        f"- Data root: `{info['paths']['data_root']}`",
-        "",
-        "## Commands",
+        "Commands",
         "",
         "- `/buddyhub:help`",
         "- `/buddyhub:status`",
@@ -645,7 +654,14 @@ def human_status_report() -> str:
         "- `/buddyhub:statusline-on`",
         "- `/buddyhub:statusline-off`",
         "",
-        "## Status line",
+        "Runtime",
+        "",
+        f"- Active session: `{runtime.get('active_session_id') or 'none'}`",
+        f"- Project: `{active_session.get('project_name') or 'unknown'}`",
+        f"- Last update: `{runtime.get('updated_at') or 'none'}`",
+        f"- Data root: `{info['paths']['data_root']}`",
+        "",
+        "Status line",
         "",
         "BuddyHub uses Claude Code text surfaces as the primary UI.",
         "The optional status line script lives at:",
