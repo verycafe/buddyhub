@@ -4,14 +4,14 @@
     "name": "verycafe"
   },
   "metadata": {
-    "description": "Experimental diagnostics for official Claude Code Buddy identity and native control-path research.",
-    "version": "0.1.6"
+    "description": "Experimental Claude Buddy research plugin with pet runtime sync and identity-aware desktop pet enhancements.",
+    "version": "0.1.7"
   },
   "plugins": [
     {
       "name": "buddyhub",
-      "description": "Experimental diagnostics for official Claude Code Buddy identity and native control-path research.",
-      "version": "0.1.6",
+      "description": "Experimental Claude Buddy research plugin with pet runtime sync and identity-aware desktop pet enhancements.",
+      "version": "0.1.7",
       "author": {
         "name": "verycafe"
       },

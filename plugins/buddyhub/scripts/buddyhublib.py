@@ -726,6 +726,7 @@ def human_status_report() -> str:
         "- `/buddyhub:doctor`",
         "- `/buddyhub:statusline-on`",
         "- `/buddyhub:statusline-off`",
+        "- `/buddyhub:pet-install`",
         "",
         "Runtime",
         "",

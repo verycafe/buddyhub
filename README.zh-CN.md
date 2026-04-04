@@ -59,6 +59,7 @@ BuddyHub 目标通过 Claude Code marketplace 流程安装：
 - `/buddyhub:doctor`
 - `/buddyhub:statusline-on`
 - `/buddyhub:statusline-off`
+- `/buddyhub:pet-install`
 - `/buddyhub:uninstall`
 
 ## 状态栏
