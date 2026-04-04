@@ -35,7 +35,6 @@ Important:
 - `/buddyhub:doctor`
 - `/buddyhub:statusline-on`
 - `/buddyhub:statusline-off`
-- `/buddyhub:pet-install`
 
 ## Data Location
 
@@ -47,7 +46,6 @@ BuddyHub writes runtime data to:
 
 - BuddyHub is designed to fail open: Claude Code should keep working if BuddyHub fails.
 - The status line script is provided, but this version does not auto-edit Claude Code settings; use `/buddyhub:statusline-on` to get the script path and wire it up manually.
-- The desktop pet runtime can be refreshed from the plugin package with `/buddyhub:pet-install`.
 - Text output is diagnostic only and must not be mistaken for the finished Buddy product.
 - BuddyHub must not fabricate unavailable Buddy identity fields or present a generic body as the user's Buddy.
 - First-round manual verification is documented in [TESTING.md](/Users/tvwoo/Projects/buddyhub/TESTING.md).

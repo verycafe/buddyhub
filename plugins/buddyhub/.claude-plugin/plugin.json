@@ -1,7 +1,7 @@
 {
   "name": "buddyhub",
-  "version": "0.1.7",
-  "description": "Experimental Claude Buddy research plugin with pet runtime sync and identity-aware desktop pet enhancements.",
+  "version": "0.1.8",
+  "description": "Experimental diagnostics for official Claude Code Buddy identity and native control-path research.",
   "author": {
     "name": "verycafe"
   }

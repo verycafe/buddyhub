@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -12,7 +11,6 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from buddyhublib import (  # noqa: E402
     DATA_ROOT,
-    PLUGIN_ROOT,
     PLUGIN_REF,
     diagnose,
     ensure_ownership_manifest,
@@ -28,9 +26,6 @@ from buddyhublib import (  # noqa: E402
     stop_legacy_runtime,
     update_runtime_preferences,
 )
-
-PET_RUNTIME_SOURCE = PLUGIN_ROOT / "pet-runtime"
-PET_RUNTIME_TARGET = Path.home() / ".claude" / "pet"
 
 
 def print_json(payload: dict) -> None:
@@ -263,66 +258,6 @@ def cmd_statusline(_: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_pet_install(args: argparse.Namespace) -> int:
-    if not PET_RUNTIME_SOURCE.exists():
-        print("# BuddyHub Pet Install\n\n- Pet runtime source is missing from this plugin package.")
-        return 1
-
-    target_root = PET_RUNTIME_TARGET
-    backup_root = DATA_ROOT / "pet-backups" / now_iso().replace(":", "-")
-    target_root.mkdir(parents=True, exist_ok=True)
-    backup_root.mkdir(parents=True, exist_ok=True)
-
-    copied = []
-    backed_up = []
-    for name in ("hook.sh", "pet.py", "sprites.py"):
-        source = PET_RUNTIME_SOURCE / name
-        target = target_root / name
-        if target.exists():
-            shutil.copy2(target, backup_root / name)
-            backed_up.append(str(backup_root / name))
-        shutil.copy2(source, target)
-        if name in {"hook.sh", "pet.py"}:
-            target.chmod(0o755)
-        copied.append(str(target))
-
-    payload = {
-        "target_root": str(target_root),
-        "source_root": str(PET_RUNTIME_SOURCE),
-        "copied_files": copied,
-        "backup_root": str(backup_root),
-        "backed_up_files": backed_up,
-        "completed_at": now_iso(),
-    }
-
-    if args.json:
-        print_json(payload)
-        return 0
-
-    lines = [
-        "# BuddyHub Pet Install",
-        "",
-        f"- Source: `{payload['source_root']}`",
-        f"- Installed to: `{payload['target_root']}`",
-        f"- Files copied: `{len(copied)}`",
-        f"- Backup root: `{payload['backup_root']}`",
-    ]
-    if backed_up:
-        lines.append(f"- Previous files backed up: `{len(backed_up)}`")
-    else:
-        lines.append("- Previous files backed up: `0`")
-    lines.extend(
-        [
-            "",
-            "## Next step",
-            "",
-            "Restart your running pet process/window so it reloads the updated files.",
-        ]
-    )
-    print("\n".join(lines))
-    return 0
-
-
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="BuddyHub runtime controller")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -368,10 +303,6 @@ def build_parser() -> argparse.ArgumentParser:
 
     statusline_parser = subparsers.add_parser("statusline")
     statusline_parser.set_defaults(func=cmd_statusline)
-
-    pet_install_parser = subparsers.add_parser("pet-install")
-    pet_install_parser.add_argument("--json", action="store_true")
-    pet_install_parser.set_defaults(func=cmd_pet_install)
 
     return parser
 

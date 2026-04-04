@@ -59,7 +59,6 @@ BuddyHub is designed to be installed through a Claude Code marketplace flow:
 - `/buddyhub:doctor`
 - `/buddyhub:statusline-on`
 - `/buddyhub:statusline-off`
-- `/buddyhub:pet-install`
 - `/buddyhub:uninstall`
 
 ## Status Line
