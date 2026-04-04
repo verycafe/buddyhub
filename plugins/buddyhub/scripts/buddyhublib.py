@@ -23,35 +23,137 @@ DATA_ROOT = Path(
 )
 OWNERSHIP_FILE = DATA_ROOT / "ownership.json"
 NATIVE_PATCH_STATE_FILE = DATA_ROOT / "native-patch.json"
+CUSTOMIZATION_SETTINGS_FILE = DATA_ROOT / "customization-settings.json"
 NATIVE_BACKUP_ROOT = DATA_ROOT / "native-backups"
 NATIVE_WORK_ROOT = DATA_ROOT / "native-work"
 
 PLUGIN_REF = "buddyhub@buddyhub"
 
-SUPPORTED_PATCH_PROFILES: dict[str, dict[str, Any]] = {
-    "2.1.92": {
-        "profile_id": "blob_tophat_preview",
-        "description": "Add a tophat row to the official blob Buddy frames.",
+ELEMENT_CATALOG: dict[str, dict[str, Any]] = {
+    "tophat": {
+        "element_id": "tophat",
+        "label": "Top Hat",
+        "slot": "top",
+        "description": "Structured hat placed above the Buddy head with minimal overlap.",
+        "status": "available",
+    },
+    "coffee": {
+        "element_id": "coffee",
+        "label": "Coffee Cup",
+        "slot": "top",
+        "description": "Small cup accessory designed for the upper-right area without covering the face.",
+        "status": "available",
+    },
+    "keyboard": {
+        "element_id": "keyboard",
+        "label": "Keyboard",
+        "slot": "side",
+        "description": "Small keyboard prop intended for the lower-side area near the Buddy base.",
+        "status": "planned",
+    },
+    "book": {
+        "element_id": "book",
+        "label": "Book",
+        "slot": "top",
+        "description": "Compact book-like accessory positioned above the head.",
+        "status": "available",
+    },
+}
+
+COLOR_PRESETS: dict[str, dict[str, Any]] = {
+    "orange": {"color_id": "orange", "label": "Orange", "hex": "#f28c28"},
+    "pink": {"color_id": "pink", "label": "Pink", "hex": "#ff74b8"},
+    "blue": {"color_id": "blue", "label": "Blue", "hex": "#5aa7ff"},
+    "green": {"color_id": "green", "label": "Green", "hex": "#4ecb71"},
+    "red": {"color_id": "red", "label": "Red", "hex": "#ff5b5b"},
+    "black": {"color_id": "black", "label": "Black", "hex": "#111111"},
+    "purple": {"color_id": "purple", "label": "Purple", "hex": "#9a67ff"},
+}
+
+DEFAULT_SETTINGS: dict[str, Any] = {
+    "version": 1,
+    "element_id": "tophat",
+    "color_id": None,
+    "nickname": None,
+    "updated_at": None,
+}
+
+_BLOB_FRAME_REPLACEMENTS: list[tuple[bytes, bytes, int]] = [
+    (
+        b'[uk_]:[["            ","   .----.   "',
+        b'[uk_]:[["{TOP_ROW}","   .----.   "',
+        2,
+    ),
+    (
+        b'["            ","  .------.  "',
+        b'["{TOP_ROW}","  .------.  "',
+        2,
+    ),
+    (
+        b'["            ","    .--.    "',
+        b'["{TOP_ROW}","    .--.    "',
+        2,
+    ),
+]
+
+
+def blob_top_row_profile(
+    *,
+    profile_id: str,
+    description: str,
+    element_id: str,
+    top_row: str,
+) -> dict[str, Any]:
+    top_row_bytes = top_row.encode("utf-8")
+    replacements = []
+    for old, new_template, expected in _BLOB_FRAME_REPLACEMENTS:
+        replacements.append(
+            {
+                "old": old,
+                "new": new_template.replace(b"{TOP_ROW}", top_row_bytes),
+                "expected_matches": expected,
+            }
+        )
+    return {
+        "profile_id": profile_id,
+        "description": description,
         "species": "blob",
-        "element": "tophat",
-        "replacements": [
-            {
-                "old": b'[uk_]:[["            ","   .----.   "',
-                "new": b'[uk_]:[["   [___]    ","   .----.   "',
-                "expected_matches": 2,
-            },
-            {
-                "old": b'["            ","  .------.  "',
-                "new": b'["   [___]    ","  .------.  "',
-                "expected_matches": 2,
-            },
-            {
-                "old": b'["            ","    .--.    "',
-                "new": b'["   [___]    ","    .--.    "',
-                "expected_matches": 2,
-            },
+        "element_id": element_id,
+        "slot": "top",
+        "supports_colors": [],
+        "nickname_supported": False,
+        "preview_lines": [
+            top_row,
+            "   .----.   ",
+            "  ( @  @ )  ",
+            "  (      )  ",
+            "   `----\u00b4   ",
         ],
+        "replacements": replacements,
     }
+
+
+SUPPORTED_PATCH_PROFILES: dict[str, list[dict[str, Any]]] = {
+    "2.1.92": [
+        blob_top_row_profile(
+            profile_id="blob_tophat_preview",
+            description="Add a centered top hat row to the official blob Buddy frames.",
+            element_id="tophat",
+            top_row="   [___]    ",
+        ),
+        blob_top_row_profile(
+            profile_id="blob_coffee_preview",
+            description="Add a compact coffee cup accessory near the upper-right of the official blob Buddy.",
+            element_id="coffee",
+            top_row="       [_]  ",
+        ),
+        blob_top_row_profile(
+            profile_id="blob_book_preview",
+            description="Add a compact open-book accessory near the upper-left of the official blob Buddy.",
+            element_id="book",
+            top_row="  /___\\     ",
+        ),
+    ]
 }
 
 def ensure_data_root() -> None:
@@ -124,6 +226,7 @@ def ensure_ownership_manifest() -> dict[str, Any]:
             "owned_files": [
                 str(OWNERSHIP_FILE),
                 str(NATIVE_PATCH_STATE_FILE),
+                str(CUSTOMIZATION_SETTINGS_FILE),
             ],
             "runtime_assets": [
                 str(NATIVE_BACKUP_ROOT),
@@ -134,7 +237,205 @@ def ensure_ownership_manifest() -> dict[str, Any]:
             },
         }
         write_json(OWNERSHIP_FILE, manifest)
+    else:
+        owned_files = manifest.setdefault("owned_files", [])
+        for owned_path in (str(OWNERSHIP_FILE), str(NATIVE_PATCH_STATE_FILE), str(CUSTOMIZATION_SETTINGS_FILE)):
+            if owned_path not in owned_files:
+                owned_files.append(owned_path)
+        write_json(OWNERSHIP_FILE, manifest)
     return manifest
+
+
+def default_customization_settings() -> dict[str, Any]:
+    return dict(DEFAULT_SETTINGS)
+
+
+def normalize_nickname(value: str | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = value.strip()
+    return cleaned or None
+
+
+def sanitize_customization_settings(raw: dict[str, Any] | None) -> dict[str, Any]:
+    settings = default_customization_settings()
+    if raw:
+        settings.update(raw)
+
+    element_id = settings.get("element_id")
+    if element_id not in ELEMENT_CATALOG:
+        element_id = DEFAULT_SETTINGS["element_id"]
+
+    color_id = settings.get("color_id")
+    if color_id not in COLOR_PRESETS:
+        color_id = None
+
+    settings["element_id"] = element_id
+    settings["color_id"] = color_id
+    settings["nickname"] = normalize_nickname(settings.get("nickname"))
+    settings["version"] = DEFAULT_SETTINGS["version"]
+    return settings
+
+
+def load_customization_settings() -> dict[str, Any]:
+    return sanitize_customization_settings(read_json(CUSTOMIZATION_SETTINGS_FILE, {}))
+
+
+def save_customization_settings(settings: dict[str, Any]) -> dict[str, Any]:
+    normalized = sanitize_customization_settings(settings)
+    normalized["updated_at"] = now_iso()
+    write_json(CUSTOMIZATION_SETTINGS_FILE, normalized)
+    return normalized
+
+
+def update_customization_settings(
+    *,
+    element_id: str | None = None,
+    color_id: str | None = None,
+    nickname: str | None = None,
+    clear_nickname: bool = False,
+    reset: bool = False,
+) -> dict[str, Any]:
+    settings = default_customization_settings() if reset else load_customization_settings()
+    if element_id is not None:
+        if element_id not in ELEMENT_CATALOG:
+            raise RuntimeError(f"Unknown element_id: {element_id}")
+        settings["element_id"] = element_id
+    if color_id is not None:
+        if color_id not in COLOR_PRESETS:
+            raise RuntimeError(f"Unknown color_id: {color_id}")
+        settings["color_id"] = color_id
+    if nickname is not None:
+        settings["nickname"] = normalize_nickname(nickname)
+    if clear_nickname:
+        settings["nickname"] = None
+    return save_customization_settings(settings)
+
+
+def profiles_for_version(version: str | None) -> list[dict[str, Any]]:
+    if not version:
+        return []
+    return SUPPORTED_PATCH_PROFILES.get(version, [])
+
+
+def select_patch_profile(
+    detection: dict[str, Any],
+    identity: dict[str, Any],
+    settings: dict[str, Any],
+) -> tuple[dict[str, Any] | None, str]:
+    version = detection.get("target_version")
+    if not version:
+        return None, "No Claude Code version was detected."
+
+    species = identity.get("species")
+    if not species:
+        return None, "Current Buddy species is not verified yet."
+
+    element_id = settings.get("element_id")
+    for profile in profiles_for_version(str(version)):
+        if profile.get("species") == species and profile.get("element_id") == element_id:
+            return profile, "Selected element matches a verified patch profile for the current Buddy."
+
+    if element_id not in ELEMENT_CATALOG:
+        return None, f"Selected element {element_id!r} is not in the element catalog."
+    if not profiles_for_version(str(version)):
+        return None, "No supported patch profiles were found for the detected Claude Code version."
+    return None, (
+        f"Selected element `{element_id}` does not have a verified patch profile for "
+        f"Buddy species `{species}` on Claude Code `{version}`."
+    )
+
+
+def customization_support(
+    detection: dict[str, Any],
+    identity: dict[str, Any],
+    settings: dict[str, Any],
+) -> dict[str, Any]:
+    profile, profile_reason = select_patch_profile(detection, identity, settings)
+    selected_element = ELEMENT_CATALOG[settings["element_id"]]
+    selected_color = COLOR_PRESETS.get(settings.get("color_id"))
+    selected_nickname = normalize_nickname(settings.get("nickname"))
+
+    element_options: list[dict[str, Any]] = []
+    version = detection.get("target_version")
+    species = identity.get("species")
+    for element_id, item in ELEMENT_CATALOG.items():
+        available = False
+        reason = "Planned catalog item. No verified patch profile yet."
+        for profile_candidate in profiles_for_version(str(version) if version else None):
+            if (
+                profile_candidate.get("element_id") == element_id
+                and profile_candidate.get("species") == species
+            ):
+                available = True
+                reason = "Verified patch profile exists for the current Buddy and Claude version."
+                break
+        element_options.append(
+            {
+                **item,
+                "available": available,
+                "reason": reason,
+                "selected": settings["element_id"] == element_id,
+            }
+        )
+
+    color_options: list[dict[str, Any]] = []
+    for color_id, item in COLOR_PRESETS.items():
+        supported = bool(profile and color_id in profile.get("supports_colors", []))
+        color_options.append(
+            {
+                **item,
+                "available": supported,
+                "reason": (
+                    "Validated color slot exists for the selected profile."
+                    if supported
+                    else "No validated color patch slot exists for the current selected profile."
+                ),
+                "selected": settings.get("color_id") == color_id,
+            }
+        )
+
+    nickname_supported = bool(profile and profile.get("nickname_supported"))
+    nickname_reason = (
+        "Verified native label patch exists for the selected profile."
+        if nickname_supported
+        else "No verified native label patch point exists for the current target."
+    )
+
+    can_apply = profile is not None
+    blockers: list[str] = []
+    if profile is None:
+        blockers.append(profile_reason)
+        can_apply = False
+    if selected_color and not any(item["selected"] and item["available"] for item in color_options):
+        blockers.append(f"Selected color `{selected_color['label']}` is not validated for the current target.")
+        can_apply = False
+    if selected_nickname and not nickname_supported:
+        blockers.append("Nickname display is not verified for the current target.")
+        can_apply = False
+
+    return {
+        "settings": settings,
+        "profile": profile,
+        "profile_reason": profile_reason,
+        "element_options": element_options,
+        "color_options": color_options,
+        "nickname_supported": nickname_supported,
+        "nickname_reason": nickname_reason,
+        "selected_element": selected_element,
+        "selected_color": selected_color,
+        "selected_nickname": selected_nickname,
+        "can_apply": can_apply,
+        "apply_blockers": blockers,
+    }
+
+
+def preview_lines_for_customization(customization: dict[str, Any]) -> list[str] | None:
+    profile = customization.get("profile") or {}
+    preview_lines = profile.get("preview_lines")
+    if preview_lines:
+        return list(preview_lines)
+    return None
 
 
 def empty_identity() -> dict[str, Any]:
@@ -252,18 +553,19 @@ def detect_native_target() -> dict[str, Any]:
         result["detection_mode"] = "env"
         if candidate.exists() and candidate.is_file():
             version = candidate.name
-            profile = SUPPORTED_PATCH_PROFILES.get(version)
+            profiles = profiles_for_version(version)
+            default_profile = profiles[0] if profiles else None
             result.update(
                 {
                     "target_detected": True,
                     "target_path": str(candidate),
                     "target_version": version,
                     "target_sha1": sha1_file(candidate),
-                    "profile_supported": profile is not None,
-                    "profile_id": profile.get("profile_id") if profile else None,
-                    "profile_description": profile.get("description") if profile else None,
-                    "profile_species": profile.get("species") if profile else None,
-                    "reason": None if profile else "No supported patch profile for this binary version.",
+                    "profile_supported": bool(default_profile),
+                    "profile_id": default_profile.get("profile_id") if default_profile else None,
+                    "profile_description": default_profile.get("description") if default_profile else None,
+                    "profile_species": default_profile.get("species") if default_profile else None,
+                    "reason": None if default_profile else "No supported patch profile for this binary version.",
                 }
             )
             return result
@@ -297,18 +599,19 @@ def detect_native_target() -> dict[str, Any]:
     candidates.sort(key=lambda item: item[0], reverse=True)
     _, target = candidates[0]
     version = target.name
-    profile = SUPPORTED_PATCH_PROFILES.get(version)
+    profiles = profiles_for_version(version)
+    default_profile = profiles[0] if profiles else None
     result.update(
         {
             "target_detected": True,
             "target_path": str(target),
             "target_version": version,
             "target_sha1": sha1_file(target),
-            "profile_supported": profile is not None,
-            "profile_id": profile.get("profile_id") if profile else None,
-            "profile_description": profile.get("description") if profile else None,
-            "profile_species": profile.get("species") if profile else None,
-            "reason": None if profile else "No supported patch profile for the detected Claude version.",
+            "profile_supported": bool(default_profile),
+            "profile_id": default_profile.get("profile_id") if default_profile else None,
+            "profile_description": default_profile.get("description") if default_profile else None,
+            "profile_species": default_profile.get("species") if default_profile else None,
+            "reason": None if default_profile else "No supported patch profile for the detected Claude version.",
         }
     )
     return result
@@ -344,8 +647,102 @@ def existing_native_backup(target_path: Path, version: str) -> dict[str, Any] | 
     }
 
 
+def backup_metadata_from_path(backup_path: Path) -> dict[str, Any]:
+    return {
+        "backup_path": str(backup_path),
+        "created": False,
+        "source_sha1": sha1_file(backup_path),
+    }
+
+
+def resolve_patch_base_backup(
+    inspection: dict[str, Any],
+    target_path: Path,
+    version: str,
+) -> Path | None:
+    installed = (inspection.get("patch_state") or {}).get("installed") or {}
+    rehearsal = (inspection.get("patch_state") or {}).get("rehearsal") or {}
+    backup_candidates = [
+        installed.get("backup_path"),
+        rehearsal.get("backup_path"),
+        (inspection.get("backup") or {}).get("backup_path"),
+    ]
+    for candidate in backup_candidates:
+        if not candidate:
+            continue
+        backup_path = Path(str(candidate))
+        if backup_path.exists():
+            return backup_path
+    fallback = NATIVE_BACKUP_ROOT / version / f"{target_path.name}.{sha1_file(target_path)}.bak"
+    if fallback.exists():
+        return fallback
+    return None
+
+
+def detect_current_profile(
+    target_path: Path,
+    version: str | None,
+    species: str | None,
+) -> dict[str, Any] | None:
+    if not version or not species:
+        return None
+    for profile in profiles_for_version(version):
+        if profile.get("species") != species:
+            continue
+        status = patch_profile_status(target_path, profile)
+        if status["status"] == "patched":
+            return {
+                "profile_id": profile["profile_id"],
+                "element_id": profile["element_id"],
+                "description": profile["description"],
+                "status": status["status"],
+            }
+    return None
+
+
 def rehearsal_copy_path(version: str) -> Path:
     return NATIVE_WORK_ROOT / version / f"claude-{version}-patched"
+
+
+def patch_profile_status(binary_path: Path, profile: dict[str, Any]) -> dict[str, Any]:
+    data = binary_path.read_bytes()
+    replacement_states: list[dict[str, Any]] = []
+    unpatched_checks = 0
+    patched_checks = 0
+
+    for replacement in profile["replacements"]:
+        old = replacement["old"]
+        new = replacement["new"]
+        expected = replacement["expected_matches"]
+        old_matches = data.count(old)
+        new_matches = data.count(new)
+        state = "mixed"
+        if old_matches == expected and new_matches == 0:
+            state = "unpatched"
+            unpatched_checks += 1
+        elif old_matches == 0 and new_matches == expected:
+            state = "patched"
+            patched_checks += 1
+        replacement_states.append(
+            {
+                "expected_matches": expected,
+                "old_matches": old_matches,
+                "new_matches": new_matches,
+                "state": state,
+            }
+        )
+
+    if unpatched_checks == len(profile["replacements"]):
+        overall = "unpatched"
+    elif patched_checks == len(profile["replacements"]):
+        overall = "patched"
+    else:
+        overall = "mixed"
+
+    return {
+        "status": overall,
+        "checks": replacement_states,
+    }
 
 
 def apply_patch_profile_to_binary(binary_path: Path, profile: dict[str, Any]) -> list[dict[str, Any]]:
@@ -430,46 +827,53 @@ def inspect_native_patch(*, create_manifest: bool = False) -> dict[str, Any]:
         ensure_ownership_manifest()
     detection = detect_native_target()
     identity = current_identity_from_projects()
+    settings = load_customization_settings()
     patch_state = load_native_patch_state()
+    customization = customization_support(detection, identity, settings)
+    selected_profile = customization.get("profile")
 
     rehearsal = patch_state.get("rehearsal") or {}
     installed = patch_state.get("installed") or {}
     rehearsal_path = rehearsal.get("patched_copy_path")
     rehearsal_exists = bool(rehearsal_path and Path(rehearsal_path).exists())
     installed_present = bool(installed)
+
+    selected_target_status = None
+    if detection.get("target_detected") and detection.get("target_path") and selected_profile:
+        selected_target_status = patch_profile_status(Path(detection["target_path"]), selected_profile)
+
+    current_profile = None
+    if detection.get("target_detected") and detection.get("target_path"):
+        current_profile = detect_current_profile(
+            Path(detection["target_path"]),
+            detection.get("target_version"),
+            identity.get("species"),
+        )
+
     target_appears_patched = bool(
-        installed
-        and detection.get("target_detected")
-        and detection.get("target_path") == installed.get("target_path")
-        and detection.get("target_sha1") == installed.get("patched_sha1")
+        selected_target_status and selected_target_status["status"] == "patched"
     )
 
     backup = None
     if detection.get("target_detected") and detection.get("target_path") and detection.get("target_version"):
         backup = existing_native_backup(Path(detection["target_path"]), str(detection["target_version"]))
 
-    profile_species = detection.get("profile_species")
-    identity_species = identity.get("species")
-    if not profile_species:
-        profile_match = False
-        profile_match_reason = detection.get("reason") or "No supported patch profile was found."
-    elif not identity.get("available"):
-        profile_match = False
-        profile_match_reason = "Current Buddy identity is not verified yet."
-    elif identity_species != profile_species:
-        profile_match = False
-        profile_match_reason = (
-            f"Current Buddy species is {identity_species or 'unknown'}, but the available patch profile targets {profile_species}."
-        )
-    else:
-        profile_match = True
-        profile_match_reason = "Detected Buddy identity matches the available visual patch profile."
+    profile_match = customization["can_apply"]
+    profile_match_reason = (
+        "Current saved customization maps to a verified patch profile."
+        if customization["can_apply"]
+        else "; ".join(customization["apply_blockers"] or [customization["profile_reason"]])
+    )
 
     return {
         "detection": detection,
         "identity": identity,
+        "settings": settings,
+        "customization": customization,
         "backup": backup,
         "patch_state": patch_state,
+        "selected_target_status": selected_target_status,
+        "current_profile": current_profile,
         "rehearsal_exists": rehearsal_exists,
         "rehearsal_path": rehearsal_path,
         "installed_present": installed_present,
@@ -490,20 +894,38 @@ def apply_rehearsal_patch() -> dict[str, Any]:
 
     if not detection.get("target_detected"):
         raise RuntimeError(detection.get("reason") or "No Claude Code target was detected.")
-    if not detection.get("profile_supported"):
-        raise RuntimeError(detection.get("reason") or "No supported patch profile is available.")
     if not inspection.get("profile_match"):
-        raise RuntimeError(inspection.get("profile_match_reason") or "Patch profile does not match the current Buddy identity.")
+        raise RuntimeError(inspection.get("profile_match_reason") or "Saved customization cannot be applied to the current Buddy identity.")
 
     target_path = Path(str(detection["target_path"]))
     version = str(detection["target_version"])
-    profile = SUPPORTED_PATCH_PROFILES[version]
-    backup = ensure_native_backup(target_path, version)
+    customization = inspection["customization"]
+    profile = customization["profile"]
+    if not profile:
+        raise RuntimeError("No verified patch profile is available for the saved customization.")
+    target_status = inspection.get("selected_target_status") or {}
+    if target_status.get("status") == "patched":
+        raise RuntimeError(
+            "The detected Claude target already appears to contain the selected visual customization. "
+            "Run restore first if you need a clean original binary."
+        )
+    base_source = target_path
+    if target_status.get("status") == "mixed":
+        backup_path = resolve_patch_base_backup(inspection, target_path, version)
+        if not backup_path:
+            raise RuntimeError(
+                "The detected Claude target is in a mixed patch state for the selected customization, "
+                "and no clean backup was found to rebase from."
+            )
+        backup = backup_metadata_from_path(backup_path)
+        base_source = backup_path
+    else:
+        backup = ensure_native_backup(target_path, version)
 
     patched_copy = rehearsal_copy_path(version)
     patched_copy.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(target_path, patched_copy)
-    patched_copy.chmod(target_path.stat().st_mode)
+    shutil.copy2(base_source, patched_copy)
+    patched_copy.chmod(base_source.stat().st_mode)
 
     patch_results = apply_patch_profile_to_binary(patched_copy, profile)
     codesign_result = codesign_binary(patched_copy)
@@ -520,6 +942,7 @@ def apply_rehearsal_patch() -> dict[str, Any]:
         "target_version": version,
         "profile_id": profile["profile_id"],
         "profile_species": profile["species"],
+        "settings": inspection["settings"],
         "backup_path": backup["backup_path"],
         "source_sha1": backup["source_sha1"],
         "patched_copy_path": str(patched_copy),
@@ -536,6 +959,7 @@ def apply_rehearsal_patch() -> dict[str, Any]:
         "profile_id": profile["profile_id"],
         "profile_description": profile["description"],
         "profile_species": profile["species"],
+        "settings": inspection["settings"],
         "backup_path": backup["backup_path"],
         "backup_created": backup["created"],
         "patched_copy_path": str(patched_copy),
@@ -554,22 +978,39 @@ def apply_installed_patch() -> dict[str, Any]:
 
     if not detection.get("target_detected"):
         raise RuntimeError(detection.get("reason") or "No Claude Code target was detected.")
-    if not detection.get("profile_supported"):
-        raise RuntimeError(detection.get("reason") or "No supported patch profile is available.")
     if not inspection.get("profile_match"):
-        raise RuntimeError(inspection.get("profile_match_reason") or "Patch profile does not match the current Buddy identity.")
+        raise RuntimeError(inspection.get("profile_match_reason") or "Saved customization cannot be applied to the current Buddy identity.")
 
     target_path = Path(str(detection["target_path"]))
     version = str(detection["target_version"])
-    profile = SUPPORTED_PATCH_PROFILES[version]
-    if inspection.get("target_appears_patched"):
+    customization = inspection["customization"]
+    profile = customization["profile"]
+    if not profile:
+        raise RuntimeError("No verified patch profile is available for the saved customization.")
+    target_status = inspection.get("selected_target_status") or {}
+    if target_status.get("status") == "patched":
         raise RuntimeError(
             "Installed visual patch already appears to be present on the detected Claude target. "
             "Run restore first if you want to re-apply from a clean original binary."
         )
-    backup = ensure_native_backup(target_path, version)
+    target_restored_from_backup = False
+    if target_status.get("status") == "mixed":
+        backup_path = resolve_patch_base_backup(inspection, target_path, version)
+        if not backup_path:
+            raise RuntimeError(
+                "The detected Claude target is in a mixed patch state for the selected customization, "
+                "and no clean backup was found to rebase from."
+            )
+        backup = backup_metadata_from_path(backup_path)
+    else:
+        backup = ensure_native_backup(target_path, version)
 
     try:
+        if target_status.get("status") == "mixed":
+            backup_path = Path(backup["backup_path"])
+            shutil.copy2(backup_path, target_path)
+            target_path.chmod(backup_path.stat().st_mode)
+            target_restored_from_backup = True
         patch_results = apply_patch_profile_to_binary(target_path, profile)
         codesign_result = codesign_binary(target_path)
         if not codesign_result["ok"]:
@@ -591,6 +1032,7 @@ def apply_installed_patch() -> dict[str, Any]:
         "target_version": version,
         "profile_id": profile["profile_id"],
         "profile_species": profile["species"],
+        "settings": inspection["settings"],
         "backup_path": backup["backup_path"],
         "source_sha1": backup["source_sha1"],
         "patched_sha1": sha1_file(target_path),
@@ -606,9 +1048,11 @@ def apply_installed_patch() -> dict[str, Any]:
         "profile_id": profile["profile_id"],
         "profile_description": profile["description"],
         "profile_species": profile["species"],
+        "settings": inspection["settings"],
         "backup_path": backup["backup_path"],
         "backup_created": backup["created"],
         "patched_sha1": sha1_file(target_path),
+        "target_restored_from_backup": target_restored_from_backup,
         "patch_results": patch_results,
         "codesign": codesign_result,
         "launch_check": launch_result,

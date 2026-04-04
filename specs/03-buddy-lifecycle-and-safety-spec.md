@@ -1,11 +1,11 @@
 # Buddy Lifecycle and Safety Spec
 
-- Status: Draft v0.2
+- Status: Draft v0.3
 - Derived from: [PRD.md](/Users/tvwoo/Projects/buddyhub/PRD.md)
 
 ## 1. Purpose
 
-Define how BuddyHub safely detects, backs up, patches, verifies, restores, and removes native Buddy visual enhancements.
+Define how BuddyHub safely auto-applies, backs up, patches, verifies, restores, and removes native Buddy visual customizations.
 
 This is a hard-requirement spec.
 
@@ -20,14 +20,27 @@ If patching fails, BuddyHub must fail safe.
 V1 must support these user-visible operations:
 
 1. detect
-2. backup
-3. patch
-4. verify
-5. restore
-6. uninstall
-7. diagnose
+2. load settings
+3. backup
+4. patch
+5. verify
+6. prompt restart
+7. restore
+8. uninstall
+9. diagnose
 
-## 4. Detect Spec
+## 4. Install and Upgrade Behavior
+
+On install or upgrade, BuddyHub should:
+
+1. detect the supported Claude Code target
+2. load the user's saved customization
+3. auto-apply that customization when the target is supported
+4. clearly tell the user that Claude Code must be restarted
+
+If the target is unsupported or no safe patch profile exists, BuddyHub must stop and explain why.
+
+## 5. Detect Spec
 
 BuddyHub must determine:
 
@@ -36,12 +49,23 @@ BuddyHub must determine:
 - target Claude Code version
 - target binary path
 - whether the current version matches a supported patch profile
+- whether requested customization slots are actually supported on the current target
 
-If any of these are unknown, BuddyHub must stop before patching.
+If any required part is unknown, BuddyHub must stop before patching.
 
-## 5. Backup Spec
+## 6. Settings Load Spec
 
-Before modifying any system Claude binary, BuddyHub must create a backup of the original target file.
+Before patching, BuddyHub must load the current user choices for:
+
+- element
+- color preset
+- nickname
+
+Unsupported settings must not be silently forced into the patch.
+
+## 7. Backup Spec
+
+Before modifying any system Claude binary, BuddyHub must create or confirm a backup of the original target file.
 
 The backup record must be sufficient to answer:
 
@@ -52,7 +76,7 @@ The backup record must be sufficient to answer:
 
 Patching without backup is not acceptable.
 
-## 6. Patch Spec
+## 8. Patch Spec
 
 Patch apply must:
 
@@ -60,25 +84,39 @@ Patch apply must:
 - use a minimal replacement
 - fail if the expected match count is wrong
 - avoid unrelated binary changes
+- apply only the supported subset of user settings
 
 Patch apply must not:
 
 - blindly overwrite unmatched files
 - assume all systems share one path
 - assume one patch fits all Claude Code versions
+- claim unsupported nickname or color settings are active
 
-## 7. Verification Spec
+## 9. Verification Spec
 
 After patching, BuddyHub must verify:
 
 - the binary is still runnable
 - signature handling is complete for the current platform if needed
 - Claude Code can launch
-- the official bottom-right Buddy visibly reflects the expected visual element change
+- the expected patch bytes are present
 
 If any verification step fails, BuddyHub must recommend or perform restore.
 
-## 8. Restore Spec
+If visual confirmation still depends on a restart, BuddyHub must say so explicitly.
+
+## 10. Restart Prompt Spec
+
+After a successful apply, BuddyHub must tell the user:
+
+- the target file was patched
+- the running Claude Code process will not necessarily reflect the change yet
+- Claude Code must be restarted to see the official Buddy update
+
+This guidance must be treated as required product behavior, not an optional note.
+
+## 11. Restore Spec
 
 Restore must:
 
@@ -88,7 +126,7 @@ Restore must:
 
 Restore must not require the user to manually discover internal files first.
 
-## 9. Uninstall Spec
+## 12. Uninstall Spec
 
 Uninstall for this phase means:
 
@@ -96,7 +134,7 @@ Uninstall for this phase means:
 - restore the original Claude binary if BuddyHub had patched it
 - leave unrelated Claude settings and user data untouched
 
-## 10. Safety Constraints
+## 13. Safety Constraints
 
 BuddyHub must:
 
@@ -104,20 +142,23 @@ BuddyHub must:
 - avoid assuming `~/.local/share/claude/versions/...` is universal across all platforms
 - avoid treating internal implementation details as public API contracts
 - stop when pattern detection is ambiguous
+- avoid exposing unverified features as if they were production-ready
 
-## 11. Cross-Platform Rule
+## 14. Cross-Platform Rule
 
 Path and patch logic must be treated as platform- and install-specific.
 
 V1 may validate one platform first, but it must not document that path as universally stable.
 
-## 12. Acceptance Criteria
+## 15. Acceptance Criteria
 
 This spec is satisfied when:
 
 1. BuddyHub can safely identify whether a target install is patchable.
-2. BuddyHub never patches without backup.
-3. BuddyHub can apply a minimal native visual patch.
-4. BuddyHub can verify that the official Buddy changed.
-5. BuddyHub can restore the original binary safely.
-6. Failure paths leave Claude Code usable.
+2. BuddyHub auto-applies the saved customization when the target is supported.
+3. BuddyHub never patches without backup.
+4. BuddyHub can apply a minimal native visual patch.
+5. BuddyHub can verify that the patch landed in the target.
+6. BuddyHub clearly prompts for restart after apply.
+7. BuddyHub can restore the original binary safely.
+8. Failure paths leave Claude Code usable.

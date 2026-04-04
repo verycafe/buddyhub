@@ -6,16 +6,22 @@ This folder stores implementation-facing product specs for BuddyHub.
 
 The repository is now focused on one product target:
 
-- visual enhancement of the official Claude Code Buddy
+- visual customization of the official Claude Code Buddy
 
-The specs no longer treat runtime-state-driven Buddy behavior as the main product.
+The current phase is not about runtime-state-driven Buddy behavior.
+
+It is about:
+
+- auto-applying a selected visual customization
+- prompting the user to restart Claude Code
+- configuring additive elements, colors, and optional nickname behavior
 
 ## Current Specs
 
-- [01-buddy-state-spec.md](/Users/tvwoo/Projects/buddyhub/specs/01-buddy-state-spec.md): native visual-element model, identity inputs, patch rules, and visual verification
-- [02-buddy-ui-spec.md](/Users/tvwoo/Projects/buddyhub/specs/02-buddy-ui-spec.md): official Buddy as the only product UI target
-- [03-buddy-lifecycle-and-safety-spec.md](/Users/tvwoo/Projects/buddyhub/specs/03-buddy-lifecycle-and-safety-spec.md): detect, backup, patch, verify, restore, uninstall, and safety guarantees
-- [04-command-surface-spec.md](/Users/tvwoo/Projects/buddyhub/specs/04-command-surface-spec.md): helper command functions for inspect, apply, restore, diagnose, and uninstall
+- [01-buddy-state-spec.md](/Users/tvwoo/Projects/buddyhub/specs/01-buddy-state-spec.md): visual customization model, identity inputs, element slots, color presets, nickname rules, and validation boundaries
+- [02-buddy-ui-spec.md](/Users/tvwoo/Projects/buddyhub/specs/02-buddy-ui-spec.md): official Buddy as the only product UI target plus settings and preview behavior
+- [03-buddy-lifecycle-and-safety-spec.md](/Users/tvwoo/Projects/buddyhub/specs/03-buddy-lifecycle-and-safety-spec.md): auto-apply, backup, patch, verify, restart prompt, restore, uninstall, and safety guarantees
+- [04-command-surface-spec.md](/Users/tvwoo/Projects/buddyhub/specs/04-command-surface-spec.md): command surface for settings, inspect, apply, restore, diagnose, and uninstall
 
 ## Relationship To Other Docs
 

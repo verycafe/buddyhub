@@ -10,4 +10,5 @@ allowed-tools: Bash(python3:*)
 Present the command output directly to the user.
 - Preserve headings, bullets, file paths, and code formatting.
 - Do not paraphrase, summarize, or add commentary before or after it.
+- Preserve command names exactly, including `/buddyhub:settings`.
 - Do not call any additional tools.

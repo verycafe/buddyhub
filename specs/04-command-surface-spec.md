@@ -1,16 +1,17 @@
 # Buddy Command Surface Spec
 
-- Status: Draft v0.4
+- Status: Draft v0.5
 - Derived from: [PRD.md](/Users/tvwoo/Projects/buddyhub/PRD.md)
 
 ## 1. Purpose
 
-Define the minimum command surface that supports native Buddy visual enhancement.
+Define the minimum command surface that supports official Buddy visual customization.
 
-Commands are supporting tools only.
+Commands are supporting tools.
 
 They exist to:
 
+- open customization settings
 - inspect the current install
 - back up and patch the native Buddy target
 - restore the original file
@@ -35,6 +36,7 @@ Commands must not:
 BuddyHub V1 should include at least these user-facing capabilities:
 
 - help
+- settings
 - inspect
 - apply
 - restore
@@ -50,11 +52,23 @@ The exact invocation layer may evolve, but these functions are the required comm
 Must explain:
 
 - that BuddyHub targets the official bottom-right Buddy
-- that the current phase is visual-element enhancement only
+- that the current phase is visual customization only
 - that runtime states are out of scope for this phase
 - which operations are safe to run
 
-### 4.2 Inspect
+### 4.2 Settings
+
+Must let the user:
+
+- choose an element
+- choose a color preset
+- set or clear a nickname
+- access preview behavior
+- apply or restore
+
+If a setting is unsupported on the current target, settings must say so explicitly.
+
+### 4.3 Inspect
 
 Must show:
 
@@ -62,25 +76,26 @@ Must show:
 - detected Claude version
 - detected target path
 - current verified Buddy identity when available
-- whether a supported patch profile exists
+- whether the requested customization is supported on the current target
 
-### 4.3 Apply
+### 4.4 Apply
 
 Must:
 
 - create or confirm backup
-- apply the selected native visual patch
+- apply the current selected native visual customization
 - perform verification
-- report success only if the native Buddy is actually changed
+- report success only if the target patch was actually written
+- tell the user to restart Claude Code
 
-### 4.4 Restore
+### 4.5 Restore
 
 Must:
 
 - restore the original binary from backup
 - verify the restored target is usable
 
-### 4.5 Doctor
+### 4.6 Doctor
 
 Must help diagnose:
 
@@ -89,8 +104,9 @@ Must help diagnose:
 - signature issues
 - failed patch application
 - failed launch verification
+- unsupported element, color, or nickname slots
 
-### 4.6 Uninstall
+### 4.7 Uninstall
 
 Must:
 
@@ -110,7 +126,9 @@ This phase does not require command support for:
 
 This spec is satisfied when:
 
-1. The user can inspect whether their Claude install is patchable.
-2. The user can apply a visual patch through a clear command path.
-3. The user can restore the original install through a clear command path.
-4. Commands never substitute for real official Buddy enhancement.
+1. The user can open a customization settings flow.
+2. The user can inspect whether their Claude install is patchable.
+3. The user can apply the selected customization through a clear command path.
+4. The user is clearly told to restart Claude Code after apply.
+5. The user can restore the original install through a clear command path.
+6. Commands never substitute for real official Buddy enhancement.

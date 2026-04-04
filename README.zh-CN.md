@@ -2,7 +2,7 @@
 
 [English README](./README.md)
 
-BuddyHub 是一个面向 Claude Code 官方 Buddy 的原生视觉增强项目。
+BuddyHub 是一个面向 Claude Code 官方 Buddy 的原生视觉定制项目。
 
 它的目标只有一个：
 
@@ -12,7 +12,9 @@ BuddyHub 是一个面向 Claude Code 官方 Buddy 的原生视觉增强项目。
 
 BuddyHub 现在只专注于一件事：
 
-- 增强用户当前官方 Buddy 的视觉元素
+- 用可配置的附加元素增强用户当前官方 Buddy
+- 提供元素、颜色和昵称相关设置
+- 应用当前保存配置，并提示用户重启 Claude Code
 
 BuddyHub 当前不再把这些当作主线：
 
@@ -27,6 +29,10 @@ BuddyHub 当前不再把这些当作主线：
 - 在当前 macOS 机器上，已确认的示例目标文件是：
   - `/Users/tvwoo/.local/share/claude/versions/2.1.92`
 - 对该二进制的工作区副本做补丁后，右下角官方 Buddy 本体确实发生了视觉变化
+- 当前对 `blob` 已验证可用的附加元素有：
+  - `tophat`
+  - `coffee`
+  - `book`
 - `~/.claude/pet` 不是当前官方 Buddy 视觉增强的主交付路径
 
 ## 产品规则
@@ -39,6 +45,7 @@ BuddyHub 当前不再把这些当作主线：
 
 - 官方 Buddy 原生视觉研究
 - 版本敏感的二进制补丁
+- 附加元素目录与设置模型
 - 备份与恢复安全
 - 官方 Buddy 视觉变化的验证
 

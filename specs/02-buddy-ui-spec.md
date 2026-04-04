@@ -1,15 +1,15 @@
-# Buddy UI Spec
+# Buddy UI and Settings Spec
 
-- Status: Draft v0.4
+- Status: Draft v0.5
 - Derived from: [PRD.md](/Users/tvwoo/Projects/buddyhub/PRD.md)
 
 ## 1. Purpose
 
-Define the single UI target for BuddyHub.
+Define the user-facing UI contract for BuddyHub.
 
-## 2. Primary UI Surface
+## 2. Primary Product UI
 
-BuddyHub has only one primary UI surface:
+BuddyHub has only one primary product UI surface:
 
 - the official Claude Code Buddy already rendered in the bottom-right UI
 
@@ -21,7 +21,7 @@ UI success means:
 
 - the user looks at the existing bottom-right official Buddy
 - the Buddy is visually different because BuddyHub enhanced its native elements
-- the change is attached to the user's real Buddy identity
+- the change remains attached to the user's real Buddy identity
 
 UI success does not mean:
 
@@ -33,10 +33,12 @@ UI success does not mean:
 
 V1 may enhance:
 
-- top-row elements such as hats or accessories
-- species-specific frame details
-- face or eye-related visual details
-- other small native embellishments already attached to the official Buddy render path
+- additive top-row elements such as hats, coffee, books, or similar accessories
+- additive face or side embellishments
+- verified native color changes
+- verified nickname display near the official Buddy label
+
+V1 should prefer enhancements that feel like added accessories rather than species replacement.
 
 ## 5. Disallowed UI Directions
 
@@ -47,35 +49,64 @@ BuddyHub UI must not become:
 - a surrogate ASCII pet
 - a TUI-first replacement for the official Buddy
 
-## 6. Diagnostic Surfaces
+## 6. Secondary Control Surface
 
-Diagnostic surfaces may still exist, but they are not the product UI.
+BuddyHub must provide a settings surface as a control UI.
 
-They may help answer:
+This settings surface is not the product target itself.
 
-- which Buddy identity is currently verified
-- which installed Claude version is being targeted
-- whether a visual patch has been applied
-- whether restore is needed
+Its job is to let the user:
 
-They must never be described as equivalent to the official Buddy enhancement itself.
+- choose an element
+- choose a color preset
+- set or clear a nickname
+- view preview output
+- apply changes
+- restore the original visual
 
-## 7. Platform Reality
+## 7. Preview Rules
+
+BuddyHub must provide preview behavior, but preview must be described honestly.
+
+V1 may support:
+
+- static preview generated from known patch profiles
+- rehearsal-target preview
+- preview cards that represent the chosen element and color combination
+
+V1 must not claim:
+
+- that the currently running Claude Code process has live-updated itself
+- that the official Buddy is already changed before restart and verification
+
+## 8. Restart Reality
+
+Because the current patch path modifies the installed Claude Code binary, the expected user experience is:
+
+1. apply customization
+2. show explicit restart guidance
+3. restart Claude Code
+4. see the official Buddy update
+
+This restart requirement is part of the UI contract for this phase.
+
+## 9. Platform Reality
 
 The official Buddy UI is native to Claude Code.
 
 Therefore:
 
 - BuddyHub does not define its own cross-terminal rendering strategy for the product UI
-- terminal compatibility matters for diagnostics only
+- terminal compatibility matters for diagnostics and settings only
 - the product UI target is whatever Claude Code itself renders
 
-## 8. Acceptance Criteria
+## 10. Acceptance Criteria
 
 This spec is satisfied when:
 
 1. BuddyHub enhances the official bottom-right Buddy itself.
 2. The official Buddy remains in its native location.
 3. No second Buddy UI is introduced as the product.
-4. Diagnostic text is treated as secondary.
-5. Visual enhancement stays attached to the user's real Buddy identity.
+4. A settings surface exists for customization control.
+5. Preview is available without overstating live-update support.
+6. Restart is clearly surfaced as part of apply behavior.

@@ -2,7 +2,7 @@
 
 [中文说明](./README.zh-CN.md)
 
-BuddyHub is a native visual-enhancement project for the official Claude Code Buddy.
+BuddyHub is a native visual-customization project for the official Claude Code Buddy.
 
 Its target is only the existing Buddy in the bottom-right Claude Code UI.
 
@@ -10,7 +10,9 @@ Its target is only the existing Buddy in the bottom-right Claude Code UI.
 
 BuddyHub is now focused on one problem only:
 
-- enhance the user's real official Buddy visual elements
+- enhance the user's real official Buddy with configurable additive visual elements
+- provide settings for element, color, and optional nickname behavior
+- apply the saved customization and prompt the user to restart Claude Code
 
 BuddyHub is not currently focused on:
 
@@ -25,6 +27,10 @@ BuddyHub is not currently focused on:
 - on the current macOS machine, the validated example binary is:
   - `/Users/tvwoo/.local/share/claude/versions/2.1.92`
 - patching a workspace copy of that binary changed the official bottom-right Buddy itself
+- the current verified additive element set for `blob` includes:
+  - `tophat`
+  - `coffee`
+  - `book`
 - `~/.claude/pet` is not the main delivery path for the official Buddy visual enhancement goal
 
 ## Product Rule
@@ -37,6 +43,7 @@ Text output, diagnostics, or helper commands do not count as the product UI.
 
 - native Buddy visual research
 - version-sensitive binary patching
+- additive element catalog and settings model
 - backup and restore safety
 - verification of official Buddy visual changes
 

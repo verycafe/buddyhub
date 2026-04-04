@@ -1,0 +1,17 @@
+{
+  "description": "BuddyHub session-start customization apply hook",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/buddyhub.py\" hook SessionStart",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}

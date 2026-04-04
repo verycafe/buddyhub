@@ -4,14 +4,14 @@
     "name": "verycafe"
   },
   "metadata": {
-    "description": "Experimental native visual patch tooling for the official Claude Code Buddy.",
-    "version": "0.1.10"
+    "description": "Experimental native visual customization tooling for the official Claude Code Buddy.",
+    "version": "0.1.12"
   },
   "plugins": [
     {
       "name": "buddyhub",
-      "description": "Experimental native visual patch tooling for the official Claude Code Buddy.",
-      "version": "0.1.10",
+      "description": "Experimental native visual customization tooling for the official Claude Code Buddy.",
+    "version": "0.1.13",
       "author": {
         "name": "verycafe"
       },
