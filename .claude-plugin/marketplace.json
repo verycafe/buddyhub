@@ -1,0 +1,21 @@
+{
+  "name": "buddyhub",
+  "owner": {
+    "name": "verycafe"
+  },
+  "metadata": {
+    "description": "Reactive TUI Buddy companion for Claude Code.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "buddyhub",
+      "description": "Reactive TUI Buddy for Claude Code with lifecycle controls and safe cleanup.",
+      "version": "0.1.0",
+      "author": {
+        "name": "verycafe"
+      },
+      "source": "./plugins/buddyhub"
+    }
+  ]
+}
