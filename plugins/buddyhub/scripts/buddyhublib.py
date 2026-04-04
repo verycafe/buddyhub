@@ -1003,10 +1003,50 @@ def apply_installed_patch() -> dict[str, Any]:
         raise RuntimeError("No verified patch profile is available for the saved customization.")
     target_status = inspection.get("selected_target_status") or {}
     if target_status.get("status") == "patched":
-        raise RuntimeError(
-            "Installed visual patch already appears to be present on the detected Claude target. "
-            "Run restore first if you want to re-apply from a clean original binary."
-        )
+        backup_path = resolve_patch_base_backup(inspection, target_path, version)
+        backup = backup_metadata_from_path(backup_path) if backup_path else None
+        launch_result = verify_binary_launch(target_path)
+        patch_state = load_native_patch_state()
+        patch_state["installed"] = {
+            "applied_at": now_iso(),
+            "target_path": str(target_path),
+            "target_version": version,
+            "profile_id": profile["profile_id"],
+            "profile_species": profile["species"],
+            "saved_settings": inspection["settings"],
+            "effective_settings": customization["effective_settings"],
+            "backup_path": backup["backup_path"] if backup else None,
+            "source_sha1": backup["source_sha1"] if backup else None,
+            "patched_sha1": sha1_file(target_path),
+            "launch_check_output": launch_result["output"],
+            "mode": "installed",
+        }
+        save_native_patch_state(patch_state)
+        return {
+            "mode": "installed",
+            "target_path": str(target_path),
+            "target_version": version,
+            "profile_id": profile["profile_id"],
+            "profile_description": profile["description"],
+            "profile_species": profile["species"],
+            "settings": customization["effective_settings"],
+            "saved_settings": inspection["settings"],
+            "apply_warnings": customization.get("apply_warnings") or [],
+            "backup_path": backup["backup_path"] if backup else None,
+            "backup_created": False,
+            "patched_sha1": sha1_file(target_path),
+            "target_restored_from_backup": False,
+            "patch_results": [],
+            "codesign": {
+                "required": sys.platform == "darwin",
+                "attempted": False,
+                "ok": True,
+                "output": None,
+            },
+            "launch_check": launch_result,
+            "manual_visual_check_required": False,
+            "already_present": True,
+        }
     target_restored_from_backup = False
     if target_status.get("status") == "mixed":
         backup_path = resolve_patch_base_backup(inspection, target_path, version)

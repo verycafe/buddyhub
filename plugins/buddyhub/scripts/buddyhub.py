@@ -353,6 +353,8 @@ def cmd_apply(args: argparse.Namespace) -> int:
         f"- Patched target sha1: `{result['patched_sha1']}`",
         f"- Launch verification: `{str(result['launch_check']['ok']).lower()}`",
     ]
+    if result.get("already_present"):
+        lines.append("- Target already matched the selected official Buddy element. BuddyHub refreshed its installed patch record to match the actual binary on disk.")
     if result.get("target_restored_from_backup"):
         lines.append("- Target was first restored from backup so the new element could replace an older patch cleanly.")
     if result.get("patched_copy_path"):
@@ -387,9 +389,21 @@ def cmd_apply(args: argparse.Namespace) -> int:
     else:
         lines.extend(
             [
-                "- This command patched the detected Claude Code target directly after creating a backup.",
-                "- Restart Claude Code. The currently running process will not hot-reload this Buddy visual change.",
-                "- After restart, visually verify the official bottom-right Buddy changed.",
+                (
+                    "- The detected Claude Code target was already using the selected Buddy element."
+                    if result.get("already_present")
+                    else "- This command patched the detected Claude Code target directly after creating a backup."
+                ),
+                (
+                    "- Restart Claude Code only if it was already open and you need the running app to reload the current Buddy."
+                    if result.get("already_present")
+                    else "- Restart Claude Code. The currently running process will not hot-reload this Buddy visual change."
+                ),
+                (
+                    "- After restart, verify the official bottom-right Buddy still matches the selected element."
+                    if result.get("already_present")
+                    else "- After restart, visually verify the official bottom-right Buddy changed."
+                ),
                 "- Use `/buddyhub:restore` if you want to roll the target back to the original binary.",
             ]
         )
