@@ -1,5 +1,6 @@
 ---
 description: Turn off BuddyHub status line requested mode
+model: haiku
 disable-model-invocation: true
 allowed-tools: Bash(python3:*)
 ---

@@ -1,5 +1,6 @@
 ---
 description: Pause BuddyHub without uninstalling it
+model: haiku
 disable-model-invocation: true
 allowed-tools: Bash(python3:*)
 ---

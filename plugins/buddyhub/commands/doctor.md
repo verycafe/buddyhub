@@ -1,5 +1,6 @@
 ---
 description: Diagnose BuddyHub runtime, text UI mode, and cleanup state
+model: haiku
 disable-model-invocation: true
 allowed-tools: Bash(python3:*)
 ---

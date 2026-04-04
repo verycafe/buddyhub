@@ -1,5 +1,6 @@
 ---
 description: Request BuddyHub status line mode and show the status line script path
+model: haiku
 disable-model-invocation: true
 allowed-tools: Bash(python3:*)
 ---

@@ -1,5 +1,6 @@
 ---
 description: Show BuddyHub overview, commands, and status
+model: haiku
 disable-model-invocation: true
 allowed-tools: Bash(python3:*)
 ---

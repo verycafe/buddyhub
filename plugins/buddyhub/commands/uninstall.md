@@ -1,5 +1,6 @@
 ---
 description: Clean up BuddyHub and remove the plugin safely
+model: haiku
 disable-model-invocation: true
 allowed-tools: Bash(python3:*)
 ---

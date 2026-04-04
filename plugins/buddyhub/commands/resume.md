@@ -1,5 +1,6 @@
 ---
 description: Resume BuddyHub after a pause or disable
+model: haiku
 disable-model-invocation: true
 allowed-tools: Bash(python3:*)
 ---

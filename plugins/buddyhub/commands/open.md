@@ -1,5 +1,6 @@
 ---
 description: Show the BuddyHub detailed text view
+model: haiku
 disable-model-invocation: true
 allowed-tools: Bash(python3:*)
 ---

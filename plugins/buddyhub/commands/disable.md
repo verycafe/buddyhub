@@ -1,5 +1,6 @@
 ---
 description: Disable BuddyHub without uninstalling files
+model: haiku
 disable-model-invocation: true
 allowed-tools: Bash(python3:*)
 ---

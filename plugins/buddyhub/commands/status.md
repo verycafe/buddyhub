@@ -1,5 +1,6 @@
 ---
 description: Show BuddyHub lifecycle, Buddy state, and runtime status
+model: haiku
 disable-model-invocation: true
 allowed-tools: Bash(python3:*)
 ---
