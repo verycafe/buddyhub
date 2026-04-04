@@ -1,6 +1,6 @@
 {
   "name": "buddyhub",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "description": "Experimental native visual customization tooling for the official Claude Code Buddy.",
   "author": {
     "name": "verycafe"

@@ -192,16 +192,16 @@ SUPPORTED_PATCH_PROFILES: dict[str, list[dict[str, Any]]] = {
             profile_id="blob_tophat_preview",
             description="Add a centered top hat row to the official blob Buddy frames.",
             element_id="tophat",
-            top_row="   [___]    ",
+            top_row="   _/|\\_    ",
         ),
         blob_body_row_profile(
             profile_id="blob_coffee_preview",
             description="Add a compact coffee cup accessory on the front of the official blob Buddy.",
             element_id="coffee",
             body_rows=(
-                "  (  [_) )  ",
-                " (   [_)  ) ",
-                "   ( [_) )  ",
+                "  ( [_]o )  ",
+                " (  [_]o  ) ",
+                "   ([_]o)   ",
             ),
         ),
         blob_top_row_profile(
