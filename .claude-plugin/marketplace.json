@@ -5,13 +5,13 @@
   },
   "metadata": {
     "description": "Experimental native visual customization tooling for the official Claude Code Buddy.",
-    "version": "0.1.16"
+    "version": "0.1.17"
   },
   "plugins": [
     {
       "name": "buddyhub",
       "description": "Experimental native visual customization tooling for the official Claude Code Buddy.",
-      "version": "0.1.16",
+      "version": "0.1.17",
       "author": {
         "name": "verycafe"
       },

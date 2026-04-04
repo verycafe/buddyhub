@@ -192,6 +192,8 @@ def cmd_settings(args: argparse.Namespace) -> int:
     if warnings:
         lines.extend(["", "## Pending unsupported settings", "", *[f"- {warning}" for warning in warnings]])
 
+    available_colors = [option for option in customization["color_options"] if option["available"]]
+
     lines.extend(
         [
             "",
@@ -208,12 +210,15 @@ def cmd_settings(args: argparse.Namespace) -> int:
         lines.append(f"  Note: {option['reason']}")
 
     lines.extend(["", "## Color presets", ""])
-    for option in customization["color_options"]:
-        lines.append(
-            f"- `{option['color_id']}` | {option['label']} `{option['hex']}` | "
-            f"available `{str(option['available']).lower()}` | selected `{str(option['selected']).lower()}`"
-        )
-        lines.append(f"  Note: {option['reason']}")
+    if available_colors:
+        for option in customization["color_options"]:
+            lines.append(
+                f"- `{option['color_id']}` | {option['label']} `{option['hex']}` | "
+                f"available `{str(option['available']).lower()}` | selected `{str(option['selected']).lower()}`"
+            )
+            lines.append(f"  Note: {option['reason']}")
+    else:
+        lines.append("- No verified color presets are available for the current Buddy and Claude version yet.")
 
     lines.extend(
         [
@@ -235,8 +240,16 @@ def cmd_settings(args: argparse.Namespace) -> int:
             f"- Base Buddy: `{identity.get('name') or 'unknown'} / {identity.get('species') or 'unknown'}`",
             f"- Additive element: `{selected_element['label']}` on slot `{selected_element['slot']}`",
             f"- Element placement note: {selected_element['description']}",
-            f"- Color preview: `{selected_color['label']}`" if selected_color else "- Color preview: `none`",
-            f"- Nickname preview: `{settings.get('nickname') or 'none'}`",
+            (
+                f"- Color preview: `{selected_color['label']}`"
+                if selected_color and customization['effective_settings'].get('color_id')
+                else "- Color preview: `unavailable on current target`"
+            ),
+            (
+                f"- Nickname preview: `{customization['effective_settings'].get('nickname')}`"
+                if customization['effective_settings'].get('nickname')
+                else "- Nickname preview: `unavailable on current target`"
+            ),
             "- This preview is advisory. The official Buddy still requires `/buddyhub:apply` and a Claude Code restart.",
         ]
     )
@@ -251,13 +264,15 @@ def cmd_settings(args: argparse.Namespace) -> int:
             "- `/buddyhub:settings --element tophat`",
             "- `/buddyhub:settings --element coffee`",
             "- `/buddyhub:settings --element book`",
-            "- `/buddyhub:settings --color pink`",
-            "- `/buddyhub:settings --nickname Mochi`",
-            "- `/buddyhub:settings --clear-nickname`",
             "- `/buddyhub:settings --reset`",
             "- `/buddyhub:apply`",
         ]
     )
+    if available_colors:
+        lines.insert(len(lines) - 2, "- `/buddyhub:settings --color <preset>`")
+    if customization["nickname_supported"]:
+        lines.insert(len(lines) - 2, "- `/buddyhub:settings --nickname <short-name>`")
+        lines.insert(len(lines) - 2, "- `/buddyhub:settings --clear-nickname`")
     print("\n".join(lines))
     return 0
 

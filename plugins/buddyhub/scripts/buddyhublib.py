@@ -40,8 +40,8 @@ ELEMENT_CATALOG: dict[str, dict[str, Any]] = {
     "coffee": {
         "element_id": "coffee",
         "label": "Coffee Cup",
-        "slot": "top",
-        "description": "Small cup accessory designed for the upper-right area without covering the face.",
+        "slot": "front",
+        "description": "Small cup accessory positioned on the Buddy chest/front instead of above the head.",
         "status": "available",
     },
     "keyboard": {
@@ -96,6 +96,24 @@ _BLOB_FRAME_REPLACEMENTS: list[tuple[bytes, bytes, int]] = [
     ),
 ]
 
+_BLOB_BODY_ROW_REPLACEMENTS: list[tuple[bytes, bytes, int]] = [
+    (
+        b'","  (      )  ","   `----\\xB4   "',
+        b'","{BODY_ROW}","   `----\\xB4   "',
+        2,
+    ),
+    (
+        b'"," (        ) ","  `------\\xB4  "',
+        b'","{BODY_ROW}","  `------\\xB4  "',
+        2,
+    ),
+    (
+        b'","   (    )   ","    `--\\xB4    "',
+        b'","{BODY_ROW}","    `--\\xB4    "',
+        2,
+    ),
+]
+
 
 def blob_top_row_profile(
     *,
@@ -133,6 +151,41 @@ def blob_top_row_profile(
     }
 
 
+def blob_body_row_profile(
+    *,
+    profile_id: str,
+    description: str,
+    element_id: str,
+    body_rows: tuple[str, str, str],
+) -> dict[str, Any]:
+    replacements = []
+    for (old, new_template, expected), body_row in zip(_BLOB_BODY_ROW_REPLACEMENTS, body_rows, strict=True):
+        replacements.append(
+            {
+                "old": old,
+                "new": new_template.replace(b"{BODY_ROW}", body_row.encode("utf-8")),
+                "expected_matches": expected,
+            }
+        )
+    return {
+        "profile_id": profile_id,
+        "description": description,
+        "species": "blob",
+        "element_id": element_id,
+        "slot": "front",
+        "supports_colors": [],
+        "nickname_supported": False,
+        "preview_lines": [
+            "            ",
+            "   .----.   ",
+            "  ( @  @ )  ",
+            body_rows[0],
+            "   `----\u00b4   ",
+        ],
+        "replacements": replacements,
+    }
+
+
 SUPPORTED_PATCH_PROFILES: dict[str, list[dict[str, Any]]] = {
     "2.1.92": [
         blob_top_row_profile(
@@ -141,11 +194,15 @@ SUPPORTED_PATCH_PROFILES: dict[str, list[dict[str, Any]]] = {
             element_id="tophat",
             top_row="   [___]    ",
         ),
-        blob_top_row_profile(
+        blob_body_row_profile(
             profile_id="blob_coffee_preview",
-            description="Add a compact coffee cup accessory near the upper-right of the official blob Buddy.",
+            description="Add a compact coffee cup accessory on the front of the official blob Buddy.",
             element_id="coffee",
-            top_row="       [_]  ",
+            body_rows=(
+                "  (  [_) )  ",
+                " (   [_)  ) ",
+                "   ( [_) )  ",
+            ),
         ),
         blob_top_row_profile(
             profile_id="blob_book_preview",
