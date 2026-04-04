@@ -68,6 +68,97 @@ LIFECYCLE_STATES = {
     "uninstalled",
 }
 
+BUDDY_EXPRESSIONS = {
+    "idle": {
+        "headline": "idle",
+        "subtitle": "resting quietly",
+        "eyes": "o o",
+        "accent": "^",
+        "mouth": "---",
+        "mini": "(o o)",
+    },
+    "thinking": {
+        "headline": "thinking...",
+        "subtitle": "working through your request",
+        "eyes": "o o",
+        "accent": ".",
+        "mouth": "...",
+        "mini": "(o o)",
+    },
+    "reading": {
+        "headline": "reading",
+        "subtitle": "looking through files",
+        "eyes": "o o",
+        "accent": "=",
+        "mouth": "[=]",
+        "mini": "(o o)",
+    },
+    "coding": {
+        "headline": "coding",
+        "subtitle": "making changes",
+        "eyes": "o o",
+        "accent": "+",
+        "mouth": "{ }",
+        "mini": "(o o)",
+    },
+    "running": {
+        "headline": "running",
+        "subtitle": "executing commands",
+        "eyes": "> <",
+        "accent": "!",
+        "mouth": "_|_",
+        "mini": "(> <)",
+    },
+    "browsing": {
+        "headline": "browsing",
+        "subtitle": "checking the web",
+        "eyes": "o o",
+        "accent": "~",
+        "mouth": "/_/",
+        "mini": "(o o)",
+    },
+    "waiting": {
+        "headline": "waiting",
+        "subtitle": "needs your input",
+        "eyes": "? ?",
+        "accent": "^",
+        "mouth": "---",
+        "mini": "(? ?)",
+    },
+    "done": {
+        "headline": "done",
+        "subtitle": "finished this step",
+        "eyes": "^ ^",
+        "accent": "^",
+        "mouth": "\\_/",
+        "mini": "(^ ^)",
+    },
+    "error": {
+        "headline": "error",
+        "subtitle": "something went wrong",
+        "eyes": "x x",
+        "accent": "!",
+        "mouth": "___",
+        "mini": "(x x)",
+    },
+    "paused": {
+        "headline": "paused",
+        "subtitle": "taking a short nap",
+        "eyes": "- -",
+        "accent": "z",
+        "mouth": "---",
+        "mini": "(- -)",
+    },
+    "disabled": {
+        "headline": "disabled",
+        "subtitle": "off duty",
+        "eyes": "- -",
+        "accent": ".",
+        "mouth": "___",
+        "mini": "(- -)",
+    },
+}
+
 
 def ensure_data_root() -> None:
     DATA_ROOT.mkdir(parents=True, exist_ok=True)
@@ -393,6 +484,90 @@ def update_runtime_preferences(**changes: Any) -> dict[str, Any]:
         runtime.update(changes)
         save_runtime(runtime)
         return runtime
+
+
+def display_state(runtime: dict[str, Any]) -> str:
+    lifecycle = str(runtime.get("lifecycle_state", "enabled"))
+    if lifecycle in {"paused", "disabled"}:
+        return lifecycle
+    state = str(runtime.get("current_state", "idle"))
+    if state in BUDDY_EXPRESSIONS:
+        return state
+    return "idle"
+
+
+def buddy_expression(runtime: dict[str, Any]) -> dict[str, str]:
+    return BUDDY_EXPRESSIONS[display_state(runtime)]
+
+
+def render_buddy_sprite(runtime: dict[str, Any]) -> list[str]:
+    expression = buddy_expression(runtime)
+    return [
+        "      .-''''-.",
+        f"     /  {expression['eyes']:^5}  \\",
+        f"    |   {expression['accent']:^3}   |",
+        f"    |  {expression['mouth']:^5}  |",
+        "     '-.__.-'",
+    ]
+
+
+def render_buddy_scene(info: dict[str, Any]) -> str:
+    runtime = info["runtime"]
+    active_session = info["active_session"] or {}
+    identity = runtime.get("identity", {})
+    state = display_state(runtime)
+    expression = buddy_expression(runtime)
+    name = runtime.get("buddy_name", "Buddy")
+    project = active_session.get("project_name")
+    last_event = runtime.get("last_event") or "none"
+
+    lines = [
+        "# BuddyHub",
+        "",
+        expression["headline"],
+        expression["subtitle"],
+        "",
+        *render_buddy_sprite(runtime),
+        "",
+        f"{name} is {state}.",
+    ]
+
+    if project:
+        lines.append(f"Watching project: `{project}`")
+    else:
+        lines.append("Waiting between tasks.")
+
+    lines.append(f"Recent event: `{last_event}`")
+
+    if identity.get("available"):
+        lines.append(
+            "Identity: "
+            f"`{identity.get('species') or 'unknown'}` | "
+            f"`{identity.get('rarity') or 'unknown'}`"
+        )
+    else:
+        lines.append("Identity sync is not available in V1.")
+
+    if runtime.get("statusline_enabled", False):
+        lines.append("Status line sync is on.")
+
+    lines.extend(
+        [
+            "",
+            "Try: `/buddyhub:status` `/buddyhub:pause` `/buddyhub:doctor`",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def render_buddy_statusline(info: dict[str, Any]) -> str:
+    runtime = info["runtime"]
+    active_session = info["active_session"] or {}
+    state = display_state(runtime)
+    expression = buddy_expression(runtime)
+    project = active_session.get("project_name")
+    suffix = f" | {project}" if project else ""
+    return f"Buddy {expression['mini']} {state}{suffix}"
 
 
 def snapshot() -> dict[str, Any]:

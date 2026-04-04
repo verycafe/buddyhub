@@ -19,6 +19,8 @@ from buddyhublib import (  # noqa: E402
     now_iso,
     read_hook_payload,
     record_hook_event,
+    render_buddy_scene,
+    render_buddy_statusline,
     set_lifecycle_state,
     snapshot,
     stop_legacy_runtime,
@@ -111,43 +113,7 @@ def cmd_disable(_: argparse.Namespace) -> int:
 
 def cmd_open(_: argparse.Namespace) -> int:
     info = snapshot()
-    runtime = info["runtime"]
-    active_session = info["active_session"] or {}
-    identity = runtime.get("identity", {})
-    lines = [
-        "# BuddyHub Detail",
-        "",
-        f"- Lifecycle: `{runtime.get('lifecycle_state')}`",
-        f"- Buddy state: `{runtime.get('current_state')}`",
-        f"- Buddy name: `{runtime.get('buddy_name', 'Buddy')}`",
-        f"- Status line sync: `{str(runtime.get('statusline_enabled', False)).lower()}`",
-        f"- Active session: `{runtime.get('active_session_id') or 'none'}`",
-        f"- Project: `{active_session.get('project_name') or 'unknown'}`",
-        f"- Last event: `{runtime.get('last_event') or 'none'}`",
-        f"- Last update: `{runtime.get('updated_at') or 'none'}`",
-        "",
-        "## Quick Actions",
-        "",
-        "- `/buddyhub:status`",
-        "- `/buddyhub:pause`",
-        "- `/buddyhub:resume`",
-        "- `/buddyhub:disable`",
-        "- `/buddyhub:doctor`",
-    ]
-    if identity.get("available"):
-        lines.extend(
-            [
-                "",
-                "## Identity",
-                "",
-                f"- Species: `{identity.get('species') or 'unknown'}`",
-                f"- Rarity: `{identity.get('rarity') or 'unknown'}`",
-                f"- Shiny: `{str(bool(identity.get('shiny'))).lower()}`",
-            ]
-        )
-    else:
-        lines.extend(["", "## Identity", "", "- Unavailable in V1"])
-    print("\n".join(lines))
+    print(render_buddy_scene(info))
     return 0
 
 
@@ -296,16 +262,7 @@ def cmd_statusline_off(_: argparse.Namespace) -> int:
 
 def cmd_statusline(_: argparse.Namespace) -> int:
     info = snapshot()
-    runtime = info["runtime"]
-    active_session = info["active_session"] or {}
-    state = runtime.get("current_state", "idle")
-    name = runtime.get("buddy_name", "Buddy")
-    project = active_session.get("project_name")
-    if runtime.get("lifecycle_state") in {"paused", "disabled"}:
-        print(f"Buddy: {runtime.get('lifecycle_state')}")
-        return 0
-    suffix = f" | {project}" if project else ""
-    print(f"Buddy: {name} | {state}{suffix}")
+    print(render_buddy_statusline(info))
     return 0
 
 
