@@ -11,7 +11,7 @@ Its target is only the existing Buddy in the bottom-right Claude Code UI.
 BuddyHub is now focused on one problem only:
 
 - enhance the user's real official Buddy with configurable additive visual elements
-- provide settings for element, color, and optional nickname behavior
+- provide a guided customization flow for element, color, and optional nickname behavior
 - apply the saved customization and prompt the user to restart Claude Code
 
 BuddyHub is not currently focused on:
@@ -43,7 +43,7 @@ Text output, diagnostics, or helper commands do not count as the product UI.
 
 - native Buddy visual research
 - version-sensitive binary patching
-- additive element catalog and settings model
+- additive element catalog, settings model, and guided settings flow
 - backup and restore safety
 - verification of official Buddy visual changes
 

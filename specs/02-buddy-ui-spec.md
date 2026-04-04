@@ -64,6 +64,14 @@ Its job is to let the user:
 - apply changes
 - restore the original visual
 
+For the current public Claude Code plugin surface, this settings UI is expected to be a guided configuration flow.
+
+It must not assume the public plugin config dialog already supports:
+
+- dropdown-style element choices
+- native color swatches
+- live official Buddy preview inside the dialog
+
 ## 7. Preview Rules
 
 BuddyHub must provide preview behavior, but preview must be described honestly.

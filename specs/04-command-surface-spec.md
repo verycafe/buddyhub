@@ -68,6 +68,15 @@ Must let the user:
 
 If a setting is unsupported on the current target, settings must say so explicitly.
 
+In the current validated public plugin surface, `settings` is expected to behave as a guided flow rather than a guaranteed native dropdown dialog.
+
+That guided flow must:
+
+- inspect the current saved configuration first
+- present explicit element and color choices
+- save the selected values through BuddyHub commands
+- show an honest preview after each change
+
 ### 4.3 Inspect
 
 Must show:

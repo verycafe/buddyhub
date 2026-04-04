@@ -5,7 +5,7 @@ This plugin folder remains in the repository, but the active product direction h
 Current product focus:
 
 - native visual customization of the official Claude Code Buddy
-- settings-driven additive elements, colors, and optional nickname behavior
+- guided settings-driven additive elements, colors, and optional nickname behavior
 - apply plus restart guidance for installed Claude Code targets
 
 Not the current product focus:

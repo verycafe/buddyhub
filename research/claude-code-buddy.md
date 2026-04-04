@@ -687,3 +687,37 @@ Why it matters:
 Confidence:
 
 - mixed: `Local runtime`, `Reverse-engineered`, and `Inference`
+
+### 2026-04-05 - Public plugin settings surface pass
+
+Finding:
+
+- local Claude changelog explicitly states: `Plugin options (manifest.userConfig) now available externally`
+- `claude plugin validate` accepts `manifest.userConfig` as a record of fields with at least:
+  - `title`
+  - `description`
+  - `type`
+  - `default`
+  - `required`
+  - `sensitive`
+- the same validator rejects:
+  - `label`
+  - `choices`
+  - `placeholder`
+- the accepted field types are consistent with local binary schema strings indicating:
+  - `string`
+  - `number`
+  - `boolean`
+  - `directory`
+  - `file`
+- no official marketplace plugin on this machine currently demonstrates a richer public `userConfig` example
+
+Why it matters:
+
+- Claude Code does expose a public plugin configuration surface
+- but the currently verified public surface looks like a basic config dialog, not a rich option-picker with dropdowns, swatches, or live Buddy preview
+- BuddyHub should not assume that public plugin config alone can deliver the desired native-looking element/color preview UX
+
+Confidence:
+
+- mixed: `Official` (local changelog), `Local runtime`, and `Inference`
