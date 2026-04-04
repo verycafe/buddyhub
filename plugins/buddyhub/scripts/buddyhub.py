@@ -42,23 +42,7 @@ def cmd_status(args: argparse.Namespace) -> int:
     if args.json:
         print_json(info)
         return 0
-
-    runtime = info["runtime"]
-    active_session = info["active_session"] or {}
-    lines = [
-        "# BuddyHub Status",
-        "",
-        f"- Lifecycle: `{runtime.get('lifecycle_state')}`",
-        f"- Buddy state: `{runtime.get('current_state')}`",
-        "- UI mode: `tui-first`",
-        f"- Status line sync: `{str(runtime.get('statusline_enabled', False)).lower()}`",
-        f"- Active session: `{runtime.get('active_session_id') or 'none'}`",
-        f"- Project: `{active_session.get('project_name') or 'unknown'}`",
-        f"- Last event: `{runtime.get('last_event') or 'none'}`",
-        f"- Last update: `{runtime.get('updated_at') or 'none'}`",
-        f"- Data root: `{info['paths']['data_root']}`",
-    ]
-    print("\n".join(lines))
+    print(render_buddy_scene(info, compact=True))
     return 0
 
 

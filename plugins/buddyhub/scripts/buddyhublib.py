@@ -75,31 +75,35 @@ BUDDY_EXPRESSIONS = {
         "eyes": "o o",
         "accent": "^",
         "mouth": "---",
+        "paw": "v v",
         "mini": "(o o)",
     },
     "thinking": {
         "headline": "thinking...",
         "subtitle": "working through your request",
-        "eyes": "o o",
+        "eyes": "o .",
         "accent": ".",
         "mouth": "...",
-        "mini": "(o o)",
+        "paw": "v v",
+        "mini": "(o.)",
     },
     "reading": {
         "headline": "reading",
         "subtitle": "looking through files",
-        "eyes": "o o",
+        "eyes": "O O",
         "accent": "=",
         "mouth": "[=]",
-        "mini": "(o o)",
+        "paw": "v v",
+        "mini": "(OO)",
     },
     "coding": {
         "headline": "coding",
         "subtitle": "making changes",
-        "eyes": "o o",
+        "eyes": "+ +",
         "accent": "+",
         "mouth": "{ }",
-        "mini": "(o o)",
+        "paw": "\\ /",
+        "mini": "(++)",
     },
     "running": {
         "headline": "running",
@@ -107,15 +111,17 @@ BUDDY_EXPRESSIONS = {
         "eyes": "> <",
         "accent": "!",
         "mouth": "_|_",
+        "paw": "/ \\",
         "mini": "(> <)",
     },
     "browsing": {
         "headline": "browsing",
         "subtitle": "checking the web",
-        "eyes": "o o",
+        "eyes": "~ ~",
         "accent": "~",
         "mouth": "/_/",
-        "mini": "(o o)",
+        "paw": "v v",
+        "mini": "(~~)",
     },
     "waiting": {
         "headline": "waiting",
@@ -123,6 +129,7 @@ BUDDY_EXPRESSIONS = {
         "eyes": "? ?",
         "accent": "^",
         "mouth": "---",
+        "paw": "v v",
         "mini": "(? ?)",
     },
     "done": {
@@ -131,6 +138,7 @@ BUDDY_EXPRESSIONS = {
         "eyes": "^ ^",
         "accent": "^",
         "mouth": "\\_/",
+        "paw": "\\ /",
         "mini": "(^ ^)",
     },
     "error": {
@@ -139,6 +147,7 @@ BUDDY_EXPRESSIONS = {
         "eyes": "x x",
         "accent": "!",
         "mouth": "___",
+        "paw": "v v",
         "mini": "(x x)",
     },
     "paused": {
@@ -147,6 +156,7 @@ BUDDY_EXPRESSIONS = {
         "eyes": "- -",
         "accent": "z",
         "mouth": "---",
+        "paw": "v v",
         "mini": "(- -)",
     },
     "disabled": {
@@ -155,6 +165,7 @@ BUDDY_EXPRESSIONS = {
         "eyes": "- -",
         "accent": ".",
         "mouth": "___",
+        "paw": "v v",
         "mini": "(- -)",
     },
 }
@@ -507,11 +518,12 @@ def render_buddy_sprite(runtime: dict[str, Any]) -> list[str]:
         f"     /  {expression['eyes']:^5}  \\",
         f"    |   {expression['accent']:^3}   |",
         f"    |  {expression['mouth']:^5}  |",
+        f"     \\  {expression['paw']:^3}  /",
         "     '-.__.-'",
     ]
 
 
-def render_buddy_scene(info: dict[str, Any]) -> str:
+def render_buddy_scene(info: dict[str, Any], *, compact: bool = False) -> str:
     runtime = info["runtime"]
     active_session = info["active_session"] or {}
     identity = runtime.get("identity", {})
@@ -539,24 +551,32 @@ def render_buddy_scene(info: dict[str, Any]) -> str:
 
     lines.append(f"Recent event: `{last_event}`")
 
-    if identity.get("available"):
-        lines.append(
-            "Identity: "
-            f"`{identity.get('species') or 'unknown'}` | "
-            f"`{identity.get('rarity') or 'unknown'}`"
+    if not compact:
+        if identity.get("available"):
+            lines.append(
+                "Identity: "
+                f"`{identity.get('species') or 'unknown'}` | "
+                f"`{identity.get('rarity') or 'unknown'}`"
+            )
+        else:
+            lines.append("Identity sync is not available in V1.")
+
+        if runtime.get("statusline_enabled", False):
+            lines.append("Status line sync is on.")
+
+        lines.extend(
+            [
+                "",
+                "Try: `/buddyhub:status` `/buddyhub:pause` `/buddyhub:doctor`",
+            ]
         )
     else:
-        lines.append("Identity sync is not available in V1.")
-
-    if runtime.get("statusline_enabled", False):
-        lines.append("Status line sync is on.")
-
-    lines.extend(
-        [
-            "",
-            "Try: `/buddyhub:status` `/buddyhub:pause` `/buddyhub:doctor`",
-        ]
-    )
+        lines.extend(
+            [
+                f"Lifecycle: `{runtime.get('lifecycle_state', 'enabled')}`",
+                f"Status line sync: `{str(runtime.get('statusline_enabled', False)).lower()}`",
+            ]
+        )
     return "\n".join(lines)
 
 
