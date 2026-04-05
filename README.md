@@ -31,6 +31,10 @@ BuddyHub is not currently focused on:
   - `tophat`
   - `coffee`
   - `book`
+- the first verified color preset is:
+  - `orange`
+- the official displayed Buddy name can be overridden safely through:
+  - `~/.claude.json` `companion.name`
 - `~/.claude/pet` is not the main delivery path for the official Buddy visual enhancement goal
 
 ## Product Rule

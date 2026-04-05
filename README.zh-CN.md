@@ -33,6 +33,10 @@ BuddyHub 当前不再把这些当作主线：
   - `tophat`
   - `coffee`
   - `book`
+- 当前第一个已验证可用的颜色预设是：
+  - `orange`
+- 右下角官方 Buddy 的显示名现在也已验证可通过这里安全覆盖：
+  - `~/.claude.json` 的 `companion.name`
 - `~/.claude/pet` 不是当前官方 Buddy 视觉增强的主交付路径
 
 ## 产品规则

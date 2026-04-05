@@ -151,7 +151,10 @@ The initial preset list is:
 
 A preset may be offered only when the current patch target has a validated color slot for it.
 
-On the current validated target, color presets remain unavailable until a real native color patch point is verified.
+On the current validated target:
+
+- `orange` is verified on `2.1.92` by remapping the current uncommon Buddy accent token from `success` to `warning`
+- all other presets remain unavailable until their own native patch points are verified
 
 ## 10. Nickname Model
 

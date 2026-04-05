@@ -76,7 +76,7 @@ That guided flow must:
 - present explicit element and color choices
 - save the selected values through BuddyHub commands
 - show an honest preview after each change
-- state explicitly when nickname is supported through Claude runtime config and when color remains unavailable
+- state explicitly when nickname is supported through Claude runtime config and which color presets are actually verified on the current target
 
 ### 4.3 Inspect
 

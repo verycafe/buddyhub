@@ -71,8 +71,9 @@ Verify:
 
 - selecting a supported element is saved
 - switching from one supported element to another reuses the clean backup and does not require a manual restore step in between
-- selecting an unsupported color is saved but blocks apply
-- setting a nickname is saved but does not claim native display support unless verified
+- selecting verified `orange` is saved and can be applied
+- selecting an unverified color is saved but remains pending
+- setting a nickname is saved and can be applied through `~/.claude.json` on the current validated macOS target
 - `/buddyhub:settings --reset` returns to the default supported configuration
 
 ## 6. Rehearsal Test
@@ -110,7 +111,8 @@ Verify:
 
 - a `SessionStart` hook can auto-apply the saved supported customization
 - the hook emits restart guidance
-- the hook does not auto-apply unsupported color or nickname settings
+- the hook auto-applies supported element and `orange` settings
+- the hook leaves unsupported color settings pending
 - already-patched targets are detected cleanly and not patched again
 
 ## 8. System Install Test
@@ -172,9 +174,9 @@ Verify:
 
 Verify:
 
-- unsupported color selections block apply
-- unsupported nickname selections block apply
-- BuddyHub does not silently ignore unsupported settings
+- unverified color selections remain pending and do not silently become active
+- nickname restore returns the displayed name to the original Claude config value
+- BuddyHub does not silently claim unsupported settings are active
 
 ### 9.5 Launch failure
 

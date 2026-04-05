@@ -33,6 +33,7 @@ def print_json(payload: dict) -> None:
 def profile_summary(profile: dict | None) -> dict | None:
     if not profile:
         return None
+    color_patch = profile.get("color_patch") or {}
     return {
         "profile_id": profile.get("profile_id"),
         "description": profile.get("description"),
@@ -41,6 +42,8 @@ def profile_summary(profile: dict | None) -> dict | None:
         "slot": profile.get("slot"),
         "supports_colors": profile.get("supports_colors", []),
         "nickname_supported": bool(profile.get("nickname_supported")),
+        "active_color_id": profile.get("active_color_id"),
+        "color_patch_id": color_patch.get("color_id"),
     }
 
 
@@ -288,6 +291,7 @@ def cmd_inspect(args: argparse.Namespace) -> int:
     if args.json:
         payload = dict(info)
         payload["customization"] = customization_for_json(info["customization"])
+        payload["effective_profile"] = profile_summary(info.get("effective_profile"))
         print_json(payload)
         return 0
 
@@ -474,6 +478,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     if args.json:
         json_payload = dict(payload)
         json_payload["customization"] = customization_for_json(payload["customization"])
+        json_payload["effective_profile"] = profile_summary(payload.get("effective_profile"))
         print_json(json_payload)
         return 0
 

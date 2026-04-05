@@ -75,6 +75,23 @@ COLOR_PRESETS: dict[str, dict[str, Any]] = {
     "purple": {"color_id": "purple", "label": "Purple", "hex": "#9a67ff"},
 }
 
+COLOR_PATCH_PRESETS: dict[str, dict[str, dict[str, Any]]] = {
+    "2.1.92": {
+        "orange": {
+            "color_id": "orange",
+            "label": "Orange",
+            "description": "Remap the current uncommon Buddy accent token from green to orange/yellow.",
+            "replacements": [
+                {
+                    "old": b'uncommon:"success"',
+                    "new": b'uncommon:"warning"',
+                    "expected_matches": 2,
+                }
+            ],
+        }
+    }
+}
+
 DEFAULT_SETTINGS: dict[str, Any] = {
     "version": 1,
     "element_id": "tophat",
@@ -143,7 +160,7 @@ def blob_top_row_profile(
         "species": "blob",
         "element_id": element_id,
         "slot": "top",
-        "supports_colors": [],
+        "supports_colors": ["orange"],
         "nickname_supported": False,
         "preview_lines": [
             top_row,
@@ -178,7 +195,7 @@ def blob_body_row_profile(
         "species": "blob",
         "element_id": element_id,
         "slot": "front",
-        "supports_colors": [],
+        "supports_colors": ["orange"],
         "nickname_supported": False,
         "preview_lines": [
             "            ",
@@ -406,6 +423,29 @@ def profiles_for_version(version: str | None) -> list[dict[str, Any]]:
     return SUPPORTED_PATCH_PROFILES.get(version, [])
 
 
+def color_patch_preset_for(version: str | None, color_id: str | None) -> dict[str, Any] | None:
+    if not version or not color_id:
+        return None
+    return COLOR_PATCH_PRESETS.get(version, {}).get(color_id)
+
+
+def compose_patch_profile(
+    *,
+    profile: dict[str, Any],
+    version: str | None,
+    color_id: str | None,
+) -> dict[str, Any]:
+    composed = dict(profile)
+    replacements = list(profile.get("replacements", []))
+    color_patch = color_patch_preset_for(version, color_id)
+    if color_patch:
+        replacements.extend(color_patch.get("replacements", []))
+    composed["replacements"] = replacements
+    composed["active_color_id"] = color_id
+    composed["color_patch"] = color_patch
+    return composed
+
+
 def select_patch_profile(
     detection: dict[str, Any],
     identity: dict[str, Any],
@@ -468,15 +508,21 @@ def customization_support(
             }
         )
 
+    version = detection.get("target_version")
+
     color_options: list[dict[str, Any]] = []
     for color_id, item in COLOR_PRESETS.items():
-        supported = bool(profile and color_id in profile.get("supports_colors", []))
+        supported = bool(
+            profile
+            and color_id in profile.get("supports_colors", [])
+            and color_patch_preset_for(str(version) if version else None, color_id)
+        )
         color_options.append(
             {
                 **item,
                 "available": supported,
                 "reason": (
-                    "Validated color slot exists for the selected profile."
+                    "Validated color patch exists for the selected profile."
                     if supported
                     else "No validated color patch slot exists for the current selected profile."
                 ),
@@ -1042,8 +1088,14 @@ def inspect_native_patch(*, create_manifest: bool = False) -> dict[str, Any]:
     installed_present = bool(installed)
 
     selected_target_status = None
+    effective_profile = None
     if detection.get("target_detected") and detection.get("target_path") and selected_profile:
-        selected_target_status = patch_profile_status(Path(detection["target_path"]), selected_profile)
+        effective_profile = compose_patch_profile(
+            profile=selected_profile,
+            version=detection.get("target_version"),
+            color_id=customization["effective_settings"].get("color_id"),
+        )
+        selected_target_status = patch_profile_status(Path(detection["target_path"]), effective_profile)
 
     current_profile = None
     if detection.get("target_detected") and detection.get("target_path"):
@@ -1079,6 +1131,7 @@ def inspect_native_patch(*, create_manifest: bool = False) -> dict[str, Any]:
         "companion_config": companion_config,
         "settings": settings,
         "customization": customization,
+        "effective_profile": effective_profile,
         "backup": backup,
         "patch_state": patch_state,
         "selected_target_status": selected_target_status,
@@ -1112,6 +1165,11 @@ def apply_rehearsal_patch() -> dict[str, Any]:
     profile = customization["profile"]
     if not profile:
         raise RuntimeError("No verified patch profile is available for the saved customization.")
+    effective_profile = inspection.get("effective_profile") or compose_patch_profile(
+        profile=profile,
+        version=version,
+        color_id=customization["effective_settings"].get("color_id"),
+    )
     target_status = inspection.get("selected_target_status") or {}
     if target_status.get("status") == "patched":
         raise RuntimeError(
@@ -1136,7 +1194,7 @@ def apply_rehearsal_patch() -> dict[str, Any]:
     shutil.copy2(base_source, patched_copy)
     patched_copy.chmod(base_source.stat().st_mode)
 
-    patch_results = apply_patch_profile_to_binary(patched_copy, profile)
+    patch_results = apply_patch_profile_to_binary(patched_copy, effective_profile)
     codesign_result = codesign_binary(patched_copy)
     if not codesign_result["ok"]:
         raise RuntimeError(codesign_result["output"] or "codesign failed")
@@ -1200,8 +1258,19 @@ def apply_installed_patch() -> dict[str, Any]:
     profile = customization["profile"]
     if not profile:
         raise RuntimeError("No verified patch profile is available for the saved customization.")
+    effective_profile = inspection.get("effective_profile") or compose_patch_profile(
+        profile=profile,
+        version=version,
+        color_id=customization["effective_settings"].get("color_id"),
+    )
     target_status = inspection.get("selected_target_status") or {}
-    if target_status.get("status") == "patched":
+    installed_state = (inspection.get("patch_state") or {}).get("installed") or {}
+    installed_effective_settings = installed_state.get("effective_settings") or {}
+    visual_settings_changed = any(
+        installed_effective_settings.get(key) != customization["effective_settings"].get(key)
+        for key in ("element_id", "color_id")
+    )
+    if target_status.get("status") == "patched" and not visual_settings_changed:
         backup_path = resolve_patch_base_backup(inspection, target_path, version)
         backup = backup_metadata_from_path(backup_path) if backup_path else None
         launch_result = verify_binary_launch(target_path)
@@ -1253,11 +1322,11 @@ def apply_installed_patch() -> dict[str, Any]:
             "companion_name_patch": companion_name_patch,
         }
     target_restored_from_backup = False
-    if target_status.get("status") == "mixed":
+    if target_status.get("status") in {"mixed", "patched"}:
         backup_path = resolve_patch_base_backup(inspection, target_path, version)
         if not backup_path:
             raise RuntimeError(
-                "The detected Claude target is in a mixed patch state for the selected customization, "
+                "The detected Claude target already contains a visual patch, "
                 "and no clean backup was found to rebase from."
             )
         backup = backup_metadata_from_path(backup_path)
@@ -1270,7 +1339,7 @@ def apply_installed_patch() -> dict[str, Any]:
             shutil.copy2(backup_path, target_path)
             target_path.chmod(backup_path.stat().st_mode)
             target_restored_from_backup = True
-        patch_results = apply_patch_profile_to_binary(target_path, profile)
+        patch_results = apply_patch_profile_to_binary(target_path, effective_profile)
         codesign_result = codesign_binary(target_path)
         if not codesign_result["ok"]:
             raise RuntimeError(codesign_result["output"] or "codesign failed")
