@@ -1408,6 +1408,20 @@ def backup_metadata_from_path(backup_path: Path) -> dict[str, Any]:
     }
 
 
+def candidate_native_backups(target_path: Path, version: str) -> list[Path]:
+    backup_dir = NATIVE_BACKUP_ROOT / version
+    if not backup_dir.exists():
+        return []
+    return sorted(
+        (
+            path
+            for path in backup_dir.glob(f"{target_path.name}.*.bak")
+            if path.is_file()
+        ),
+        key=lambda path: path.name,
+    )
+
+
 def resolve_patch_base_backup(
     inspection: dict[str, Any],
     target_path: Path,
@@ -1429,6 +1443,15 @@ def resolve_patch_base_backup(
     fallback = NATIVE_BACKUP_ROOT / version / f"{target_path.name}.{sha1_file(target_path)}.bak"
     if fallback.exists():
         return fallback
+    discovered = candidate_native_backups(target_path, version)
+    if len(discovered) == 1:
+        return discovered[0]
+    for candidate in discovered:
+        source_sha1 = candidate.name.removeprefix(f"{target_path.name}.").removesuffix(".bak")
+        if source_sha1 and source_sha1 != sha1_file(target_path):
+            return candidate
+    if discovered:
+        return discovered[0]
     return None
 
 
