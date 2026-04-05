@@ -1,6 +1,4 @@
 class Buddyhub < Formula
-  include Language::Python::Virtualenv
-
   desc "Standalone TUI configurator for the official Claude Code Buddy"
   homepage "https://github.com/verycafe/buddyhub"
   url "https://github.com/verycafe/buddyhub/archive/70d793fb2d060ad24bd126f77f233eaeeaedfb22.tar.gz"
@@ -10,7 +8,11 @@ class Buddyhub < Formula
   depends_on "python@3.13"
 
   def install
-    virtualenv_install_with_resources(using: "python@3.13")
+    libexec.install Dir["*"]
+    (bin/"buddyhub").write <<~SH
+      #!/bin/bash
+      exec "#{Formula["python@3.13"].opt_bin}/python3.13" "#{libexec}/buddyhub_tui.py" "$@"
+    SH
   end
 
   test do
