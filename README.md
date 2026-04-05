@@ -11,7 +11,7 @@ Its target is only the existing Buddy in the bottom-right Claude Code UI.
 BuddyHub is now focused on one problem only:
 
 - enhance the user's real official Buddy with configurable additive visual elements
-- provide a native-menu customization flow for color and optional nickname behavior while keeping element switching hidden in the current release
+- provide a standalone TUI menu for color and optional nickname behavior while keeping element switching hidden in the current release
 - apply the saved customization and prompt the user to restart Claude Code
 
 BuddyHub is not currently focused on:
@@ -56,9 +56,47 @@ Text output, diagnostics, or helper commands do not count as the product UI.
 
 - native Buddy visual research
 - version-sensitive binary patching
-- additive element catalog, settings model, and guided settings flow
+- external TUI menu for Buddy customization
 - backup and restore safety
 - verification of official Buddy visual changes
+
+## Current TUI Entry
+
+Run the standalone BuddyHub menu with:
+
+```bash
+/Users/tvwoo/Projects/buddyhub/buddyhub
+```
+
+Current top-level menu:
+- `Language`
+- `Color`
+- `Nickname`
+- `Apply`
+- `Restore`
+- `Quit`
+
+Current scope note:
+- element switching is hidden in this phase
+- BuddyHub keeps the currently installed element as-is, or keeps `none` if no element is installed
+- this phase only exposes `Color` and `Nickname` as user-editable draft settings
+
+The TUI reads the current installed Buddy state first, then shows:
+- `Installed State`
+- `Draft State`
+- `Installed Preview`
+- `Draft Preview`
+
+After `Apply` or `Restore`, the TUI shows a dedicated result card instead of relying on a single footer line.
+The result card also summarizes which visible Buddy properties changed, such as:
+- `Display name`
+- `Color`
+
+For a quick non-interactive check:
+
+```bash
+/Users/tvwoo/Projects/buddyhub/buddyhub --dump-state
+```
 
 ## Docs
 

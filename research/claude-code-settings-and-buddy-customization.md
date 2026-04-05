@@ -66,6 +66,40 @@ Relevant evidence:
 - [/Users/tvwoo/Projects/buddyhub/plugins/buddyhub/commands/settings.md](/Users/tvwoo/Projects/buddyhub/plugins/buddyhub/commands/settings.md)
 - [/Users/tvwoo/.claude/cache/changelog.md](/Users/tvwoo/.claude/cache/changelog.md)
 
+### 2.1 Hierarchical menus for third-party plugin commands are not yet verified
+
+The desired BuddyHub UX is:
+
+- user enters `/buddyhub`
+- Claude Code shows a first-level menu
+- choosing an item opens a second-level menu such as colors
+
+As of this research pass, BuddyHub does not have verified evidence that third-party plugins can render that style of hierarchical native menu from a plugin command.
+
+What was verified instead:
+
+- plugin commands are file/content-backed slash commands
+- command metadata supports fields such as `description`, `argumentHint`, `allowedTools`, and related prompt metadata
+- plugin `userConfig` is a verified native settings surface
+
+What was not found in verified plugin-facing schema evidence:
+
+- a plugin command field for nested menus
+- a plugin command field for command-body click menus
+- a plugin-exposed way to declare `type:"local-jsx"` for third-party commands
+
+Product implication:
+
+- BuddyHub must not claim `/buddyhub` can currently be turned into a first-party-feeling hierarchical menu unless that behavior is directly proven
+- if a menu UX is required, the current proven native path is still `/config > BuddyHub`
+
+Confidence: `Official` + `Local runtime` + `Reverse-engineered`
+
+Relevant evidence:
+
+- [/Users/tvwoo/.claude/cache/changelog.md](/Users/tvwoo/.claude/cache/changelog.md)
+- [/Users/tvwoo/.local/share/claude/versions/2.1.92](/Users/tvwoo/.local/share/claude/versions/2.1.92)
+
 ### 3. Internal `local-jsx` exists, but plugin access is not proven
 
 Claude Code clearly contains internal local UI mechanisms, including `local-jsx` behavior used by first-party features such as `/buddy`.

@@ -13,7 +13,7 @@ BuddyHub 是一个面向 Claude Code 官方 Buddy 的原生视觉定制项目。
 BuddyHub 现在只专注于一件事：
 
 - 用可配置的附加元素增强用户当前官方 Buddy
-- 提供颜色和昵称相关设置，并在当前版本隐藏元素切换
+- 提供独立 TUI 菜单式的颜色和昵称设置，并在当前版本隐藏元素切换
 - 应用当前保存配置，并提示用户重启 Claude Code
 
 BuddyHub 当前不再把这些当作主线：
@@ -58,9 +58,47 @@ BuddyHub 当前不再把这些当作主线：
 
 - 官方 Buddy 原生视觉研究
 - 版本敏感的二进制补丁
-- 附加元素目录与设置模型
+- 外部 TUI 菜单式配置器
 - 备份与恢复安全
 - 官方 Buddy 视觉变化的验证
+
+## 当前 TUI 入口
+
+现在可以直接运行独立菜单：
+
+```bash
+/Users/tvwoo/Projects/buddyhub/buddyhub
+```
+
+当前一级菜单：
+- `Language`
+- `Color`
+- `Nickname`
+- `Apply`
+- `Restore`
+- `Quit`
+
+当前阶段范围说明：
+- `element` 切换在这一版里继续隐藏
+- BuddyHub 会保持当前已安装元素不变；如果当前没有元素，就继续保持 `none`
+- 当前真正开放给用户编辑的只有 `Color` 和 `Nickname`
+
+TUI 会先读取本机当前已安装 Buddy 的真实状态，然后显示：
+- `已安装状态`
+- `草稿状态`
+- `已安装预览`
+- `草稿预览`
+
+执行 `Apply` 或 `Restore` 之后，TUI 会显示单独的结果卡片，不再只靠底部一行提示。
+结果卡还会汇总这次真正改动了哪些官方 Buddy 可见属性，例如：
+- `Display name`
+- `Color`
+
+如果想快速做一次非交互检查：
+
+```bash
+/Users/tvwoo/Projects/buddyhub/buddyhub --dump-state
+```
 
 ## 文档
 

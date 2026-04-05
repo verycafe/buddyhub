@@ -76,6 +76,16 @@ COLOR_PRESETS: dict[str, dict[str, Any]] = {
     "purple": {"color_id": "purple", "label": "Purple", "hex": "#9a67ff"},
 }
 
+LANGUAGE_PRESETS: dict[str, dict[str, str]] = {
+    "zh_cn": {"language_id": "zh_cn", "label": "中文"},
+    "en": {"language_id": "en", "label": "English"},
+    "ja": {"language_id": "ja", "label": "日本語"},
+    "zh_hans": {"language_id": "zh_hans", "label": "汉语"},
+    "de": {"language_id": "de", "label": "Deutsch"},
+    "fr": {"language_id": "fr", "label": "Français"},
+    "ru": {"language_id": "ru", "label": "Русский"},
+}
+
 USERCONFIG_ELEMENT_KEYS: dict[str, str] = {
     "element_tophat": "tophat",
     "element_coffee": "coffee",
@@ -190,9 +200,10 @@ OFFICIAL_BUDDY_SURFACES: list[dict[str, str]] = [
 
 DEFAULT_SETTINGS: dict[str, Any] = {
     "version": 1,
-    "element_id": "tophat",
+    "element_id": None,
     "color_id": None,
     "nickname": None,
+    "language_id": "en",
     "updated_at": None,
 }
 
@@ -331,6 +342,16 @@ SUPPORTED_PATCH_PROFILES: dict[str, list[dict[str, Any]]] = {
     ]
 }
 
+BASE_SPECIES_PREVIEW_LINES: dict[str, list[str]] = {
+    "blob": [
+        "            ",
+        "   .----.   ",
+        "  ( @  @ )  ",
+        "  (      )  ",
+        "   `----´   ",
+    ]
+}
+
 def ensure_data_root() -> None:
     DATA_ROOT.mkdir(parents=True, exist_ok=True)
 
@@ -464,16 +485,21 @@ def sanitize_customization_settings(raw: dict[str, Any] | None) -> dict[str, Any
         settings.update(raw)
 
     element_id = settings.get("element_id")
-    if element_id not in ELEMENT_CATALOG:
+    if element_id is not None and element_id not in ELEMENT_CATALOG:
         element_id = DEFAULT_SETTINGS["element_id"]
 
     color_id = settings.get("color_id")
     if color_id not in COLOR_PRESETS:
         color_id = None
 
+    language_id = settings.get("language_id")
+    if language_id not in LANGUAGE_PRESETS:
+        language_id = DEFAULT_SETTINGS["language_id"]
+
     settings["element_id"] = element_id
     settings["color_id"] = color_id
     settings["nickname"] = normalize_nickname(settings.get("nickname"))
+    settings["language_id"] = language_id
     settings["version"] = DEFAULT_SETTINGS["version"]
     return settings
 
@@ -494,6 +520,8 @@ def update_customization_settings(
     element_id: str | None = None,
     color_id: str | None = None,
     nickname: str | None = None,
+    language_id: str | None = None,
+    clear_element: bool = False,
     clear_color: bool = False,
     clear_nickname: bool = False,
     reset: bool = False,
@@ -507,6 +535,12 @@ def update_customization_settings(
         if color_id not in COLOR_PRESETS:
             raise RuntimeError(f"Unknown color_id: {color_id}")
         settings["color_id"] = color_id
+    if language_id is not None:
+        if language_id not in LANGUAGE_PRESETS:
+            raise RuntimeError(f"Unknown language_id: {language_id}")
+        settings["language_id"] = language_id
+    if clear_element:
+        settings["element_id"] = None
     if clear_color:
         settings["color_id"] = None
     if nickname is not None:
@@ -628,6 +662,30 @@ def compose_patch_profile(
     return composed
 
 
+def base_profile_for_species(
+    *,
+    version: str | None,
+    species: str,
+) -> dict[str, Any]:
+    preview_lines = default_preview_lines_for_species(species) or []
+    supported_colors = [
+        color_id
+        for color_id in ("green", "orange", "blue", "pink", "purple", "red", "black")
+        if color_patch_preset_for(version, color_id)
+    ]
+    return {
+        "profile_id": f"{species}_base_preview",
+        "description": "Keep the official Buddy base frame without adding an extra element.",
+        "species": species,
+        "element_id": None,
+        "slot": "base",
+        "supports_colors": supported_colors,
+        "nickname_supported": False,
+        "preview_lines": preview_lines,
+        "replacements": [],
+    }
+
+
 def select_patch_profile(
     detection: dict[str, Any],
     identity: dict[str, Any],
@@ -642,6 +700,11 @@ def select_patch_profile(
         return None, "Current Buddy species is not verified yet."
 
     element_id = settings.get("element_id")
+    if element_id is None:
+        return (
+            base_profile_for_species(version=str(version), species=str(species)),
+            "No additive element selected. BuddyHub will keep the official Buddy frame and only apply supported overlays such as color.",
+        )
     for profile in profiles_for_version(str(version)):
         if profile.get("species") == species and profile.get("element_id") == element_id:
             return profile, "Selected element matches a verified patch profile for the current Buddy."
@@ -668,7 +731,13 @@ def customization_support(
     runtime_warnings: list[str] | None = None,
 ) -> dict[str, Any]:
     profile, profile_reason = select_patch_profile(detection, identity, settings)
-    selected_element = ELEMENT_CATALOG[settings["element_id"]]
+    selected_element = ELEMENT_CATALOG.get(settings["element_id"]) or {
+        "element_id": None,
+        "label": "None",
+        "slot": "base",
+        "description": "Keep the official Buddy frame without adding an element.",
+        "status": "available",
+    }
     selected_color = COLOR_PRESETS.get(settings.get("color_id"))
     selected_nickname = normalize_nickname(settings.get("nickname"))
 
@@ -765,6 +834,15 @@ def preview_lines_for_customization(customization: dict[str, Any]) -> list[str] 
     preview_lines = profile.get("preview_lines")
     if preview_lines:
         return list(preview_lines)
+    return None
+
+
+def default_preview_lines_for_species(species: str | None) -> list[str] | None:
+    if not species:
+        return None
+    preview = BASE_SPECIES_PREVIEW_LINES.get(species)
+    if preview:
+        return list(preview)
     return None
 
 
@@ -1153,9 +1231,71 @@ def detect_current_profile(
                 "profile_id": profile["profile_id"],
                 "element_id": profile["element_id"],
                 "description": profile["description"],
+                "preview_lines": list(profile.get("preview_lines") or []),
+                "supports_colors": list(profile.get("supports_colors") or []),
+                "slot": profile.get("slot"),
                 "status": status["status"],
             }
     return None
+
+
+def detect_current_color_id(
+    target_path: Path,
+    version: str | None,
+) -> str | None:
+    if not version:
+        return None
+    presets = COLOR_PATCH_PRESETS.get(version, {})
+    patched_colors: list[str] = []
+    mixed_detected = False
+    for color_id, preset in presets.items():
+        if color_id == "green":
+            continue
+        status = patch_profile_status(
+            target_path,
+            {
+                "profile_id": f"color_{color_id}",
+                "replacements": preset.get("replacements", []),
+            },
+        )
+        if status["status"] == "patched":
+            patched_colors.append(color_id)
+        elif status["status"] == "mixed":
+            mixed_detected = True
+    if len(patched_colors) == 1:
+        return patched_colors[0]
+    if mixed_detected or len(patched_colors) > 1:
+        return None
+    return "green"
+
+
+def current_visual_state(
+    *,
+    detection: dict[str, Any],
+    identity: dict[str, Any],
+    companion_config: dict[str, Any],
+    current_profile: dict[str, Any] | None,
+) -> dict[str, Any]:
+    preview_lines = None
+    element_id = None
+    if current_profile:
+        preview_lines = list(current_profile.get("preview_lines") or [])
+        element_id = current_profile.get("element_id")
+    if not preview_lines:
+        preview_lines = default_preview_lines_for_species(identity.get("species"))
+    color_id = None
+    if detection.get("target_detected") and detection.get("target_path"):
+        color_id = detect_current_color_id(
+            Path(detection["target_path"]),
+            detection.get("target_version"),
+        )
+    return {
+        "name": companion_config.get("name") or identity.get("name"),
+        "species": identity.get("species"),
+        "element_id": element_id,
+        "color_id": color_id,
+        "preview_lines": preview_lines,
+    }
 
 
 def rehearsal_copy_path(version: str) -> Path:
@@ -1333,6 +1473,12 @@ def inspect_native_patch(*, create_manifest: bool = False) -> dict[str, Any]:
             detection.get("target_version"),
             identity.get("species"),
         )
+    current_visual = current_visual_state(
+        detection=detection,
+        identity=identity,
+        companion_config=companion_config,
+        current_profile=current_profile,
+    )
 
     target_appears_patched = bool(
         selected_target_status and selected_target_status["status"] == "patched"
@@ -1368,6 +1514,7 @@ def inspect_native_patch(*, create_manifest: bool = False) -> dict[str, Any]:
         "surface_sync": surface_sync,
         "selected_target_status": selected_target_status,
         "current_profile": current_profile,
+        "current_visual": current_visual,
         "rehearsal_exists": rehearsal_exists,
         "rehearsal_path": rehearsal_path,
         "installed_present": installed_present,
@@ -1499,17 +1646,31 @@ def apply_installed_patch() -> dict[str, Any]:
     target_status = inspection.get("selected_target_status") or {}
     installed_state = (inspection.get("patch_state") or {}).get("installed") or {}
     installed_effective_settings = installed_state.get("effective_settings") or {}
-    visual_settings_changed = any(
-        installed_effective_settings.get(key) != customization["effective_settings"].get(key)
-        for key in ("element_id", "color_id")
+    current_profile = inspection.get("current_profile") or {}
+    current_visual = inspection.get("current_visual") or {}
+    desired_effective_settings = customization["effective_settings"]
+    desired_element_id = desired_effective_settings.get("element_id")
+    desired_color_id = desired_effective_settings.get("color_id") or "green"
+    current_element_id = current_profile.get("element_id")
+    current_color_id = current_visual.get("color_id") or "green"
+    actual_visual_matches = (
+        current_element_id == desired_element_id
+        and current_color_id == desired_color_id
     )
+    if installed_effective_settings:
+        visual_settings_changed = any(
+            installed_effective_settings.get(key) != desired_effective_settings.get(key)
+            for key in ("element_id", "color_id")
+        )
+    else:
+        visual_settings_changed = not actual_visual_matches
     if target_status.get("status") == "patched" and not visual_settings_changed:
         backup_path = resolve_patch_base_backup(inspection, target_path, version)
         backup = backup_metadata_from_path(backup_path) if backup_path else None
         launch_result = verify_binary_launch(target_path)
         companion_name_patch = sync_companion_name_override(
             inspection=inspection,
-            applied_settings=customization["effective_settings"],
+            applied_settings=desired_effective_settings,
         )
         patch_state = load_native_patch_state()
         patch_state["installed"] = {
@@ -1519,7 +1680,7 @@ def apply_installed_patch() -> dict[str, Any]:
             "profile_id": profile["profile_id"],
             "profile_species": profile["species"],
             "saved_settings": inspection["settings"],
-            "effective_settings": customization["effective_settings"],
+            "effective_settings": desired_effective_settings,
             "backup_path": backup["backup_path"] if backup else None,
             "source_sha1": backup["source_sha1"] if backup else None,
             "patched_sha1": sha1_file(target_path),
@@ -1535,7 +1696,7 @@ def apply_installed_patch() -> dict[str, Any]:
             "profile_id": profile["profile_id"],
             "profile_description": profile["description"],
             "profile_species": profile["species"],
-            "settings": customization["effective_settings"],
+            "settings": desired_effective_settings,
             "saved_settings": inspection["settings"],
             "apply_warnings": customization.get("apply_warnings") or [],
             "backup_path": backup["backup_path"] if backup else None,
