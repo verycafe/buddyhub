@@ -27,6 +27,10 @@ Current intended behavior:
 
 If automatic detection is incomplete, BuddyHub must enter `Setup` instead of silently failing.
 
+`DEV` 分支 Ink 迁移阶段也必须遵守这条规则：
+
+- if `needs_setup` is true, Ink must not boot straight into the normal main menu
+
 ## 4. Setup Screen
 
 `Setup` must let the user enter:
@@ -59,3 +63,4 @@ This spec is satisfied when:
 2. detection failure leads to a guided `Setup`
 3. saved override paths are persisted and reused
 4. system-language defaulting works on clean first launch
+5. Ink 与 Python UI 在 `needs_setup` 判定上保持一致

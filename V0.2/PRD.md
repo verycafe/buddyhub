@@ -155,6 +155,41 @@ V0.2 当前已经确认：
 - V0.2 的目标是 `Ink 成为唯一公开 UI`
 - 不是 `立即把全部 patch 核心改写成 Node`
 
+## 6.6 Ink 切换门槛
+
+在本轮多专家复审后，V0.2 明确增加以下切换门槛。
+
+在这些门槛满足前：
+
+- `buddyhub` 公开入口不能从 Python TUI 切到 Ink
+- Ink 仍然只能被视为 `DEV` 分支上的迁移原型
+
+当前已确认的高风险项：
+
+1. Ink 当前依赖的是 Python `BuddyHubTUI`，而不是直接依赖稳定 core/service 层
+2. bridge 的只读调用当前不是严格无副作用
+3. Ink 还未完整覆盖公开契约中的 `Setup` 和 `Uninstall`
+4. Ink 当前颜色菜单还没有完全吃到 canonical availability model
+5. npm 公开安装路径当前仍然间接依赖 Python 运行时
+
+因此当前阶段必须满足以下门槛后，才能切换公开入口：
+
+1. bridge 不再以 `BuddyHubTUI` 作为真实行为来源
+2. bridge 的 `dump-*` 读操作必须严格无副作用
+3. bridge 必须返回完整 canonical UI model：
+   - color availability
+   - unavailable reason
+   - setup guidance
+   - preview-ready data
+   - result payloads
+4. Ink 必须接通：
+   - `Setup`
+   - `Apply`
+   - `Restore`
+   - `Uninstall`
+5. Ink 菜单必须完整覆盖当前公开菜单语义，而不是只覆盖部分 happy path
+6. 公开安装路径中的运行时前提必须写清楚，并与实际入口一致
+
 ## 7. 设计原则
 
 ### 7.1 真实 Buddy 优先
@@ -202,6 +237,15 @@ BuddyHub 的“纯粹化”优先级是：
 
 不应该为了技术栈统一而在当前阶段同时重写已验证的 patch 核心。
 
+### 7.6 切换纪律
+
+在 Ink 成为公开入口前，必须遵守：
+
+- 不把 `DEV` 原型能力写成已完成公开能力
+- 不把 `buddyhub-ink-dev` 当成正式用户入口
+- 不让 Ink 绕过 `Setup`、availability gating、backup safety、uninstall lifecycle
+- 不让 bridge 成为另一层隐式 TUI，而必须逐步收敛成稳定服务边界
+
 ## 8. 当前非目标
 
 V0.2 明确不做：
@@ -224,3 +268,4 @@ V0.2 明确不做：
 5. `Apply` 后重启 Claude Code，右下角 Buddy 与 `/buddy` 卡片表现一致
 6. `Restore` 和 `Uninstall` 都不要求用户自己手工查内部文件
 7. `DEV` 分支上的 Ink 迁移不改变当前已验证 patch 核心的安全行为
+8. Ink 成为公开入口前，必须满足 6.6 中定义的切换门槛

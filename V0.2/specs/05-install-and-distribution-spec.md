@@ -34,6 +34,13 @@ Current architecture transition rule:
 - Python may remain behind the package as a private runtime dependency during V0.2
 - users should not be asked to launch Python files directly
 
+Current cutover rule:
+
+- until Ink satisfies the public UI contract, the project must not claim that Ink is already the public entry
+- when the public `buddyhub` command eventually flips to Ink, the runtime prerequisites documented to users must match the real shipped entrypoint
+
+During V0.2, if the npm package still depends on Python under the hood, that dependency and any critical runtime prerequisites must be documented explicitly.
+
 ## 4. Current Non-Goals
 
 This phase does not require public documentation for:
@@ -52,3 +59,4 @@ This spec is satisfied when:
 2. the README documents npm as the public install path
 3. launch enters the standalone menu, not a plugin command surface
 4. when Ink becomes the public UI, installation wording does not need to change
+5. documented runtime prerequisites match the real shipped public entrypoint
