@@ -10,7 +10,7 @@ import {render, Box, Text, useApp, useInput} from 'ink';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '..');
-const PYTHON_TUI = path.join(ROOT, 'buddyhub_tui.py');
+const PYTHON_BRIDGE = path.join(ROOT, 'buddyhub_bridge.py');
 
 const TOP_LEVEL_LABELS = {
 	language: 'Language',
@@ -25,9 +25,9 @@ const TOP_LEVEL_LABELS = {
 const DETAILS = {
 	language: 'Choose the BuddyHub menu language.',
 	color: 'Choose a Buddy color preset. Preview updates instantly.',
-	nickname: 'Type a new Buddy display name and save it into the working draft.',
-	apply: 'Ink DEV prototype only. Real apply remains on the Python TUI today.',
-	restore: 'Ink DEV prototype only. Real restore remains on the Python TUI today.',
+	nickname: 'Type a new Buddy display name and save it.',
+	apply: 'Apply the current saved selection to Claude Code, then restart Claude Code.',
+	restore: 'Restore the original official Buddy customization from backup.',
 	uninstall: 'Ink DEV prototype only. Real uninstall remains on the Python TUI today.',
 	quit: 'Exit the Ink development prototype.'
 };
@@ -50,8 +50,8 @@ function sectionTitle(label) {
 	return inkText({bold: true}, label);
 }
 
-function runPython(args) {
-	const result = spawnSync('python3', [PYTHON_TUI, ...args], {
+function runBridge(args) {
+	const result = spawnSync('python3', [PYTHON_BRIDGE, ...args], {
 		cwd: ROOT,
 		encoding: 'utf8'
 	});
@@ -61,16 +61,26 @@ function runPython(args) {
 	}
 
 	if (result.status !== 0) {
+		let parsed = null;
+		try {
+			parsed = JSON.parse(result.stdout || '{}');
+		} catch {}
+		if (parsed?.error) {
+			throw new Error(parsed.error);
+		}
 		throw new Error((result.stderr || result.stdout || '').trim() || `python3 exited with ${result.status}`);
 	}
 
-	return JSON.parse(result.stdout);
+	const payload = JSON.parse(result.stdout);
+	if (payload && payload.ok === false) {
+		throw new Error(payload.error || 'Bridge action failed');
+	}
+	return payload;
 }
 
 function loadInitialData() {
-	const state = runPython(['--dump-state']);
-	const ui = runPython(['--dump-ui-model']);
-	return {state, ui};
+	const payload = runBridge(['dump-prototype']);
+	return {state: payload.state, ui: payload.ui};
 }
 
 function topLevelValue(itemId, draft) {
@@ -158,6 +168,7 @@ function selectionPanel(screen, uiModel, languageIndex, colorIndex, nicknameInpu
 
 function App({initialState, uiModel}) {
 	const {exit} = useApp();
+	const [stateData, setStateData] = useState(initialState);
 	const [screen, setScreen] = useState('main');
 	const [mainIndex, setMainIndex] = useState(0);
 	const [languageIndex, setLanguageIndex] = useState(() => {
@@ -174,7 +185,35 @@ function App({initialState, uiModel}) {
 	const [savedNickname, setSavedNickname] = useState(initialState.settings.nickname || '');
 	const [message, setMessage] = useState('Ink DEV prototype. Use arrows + Enter. Esc returns.');
 
-	const currentVisual = initialState.current_visual || {};
+	const currentVisual = stateData.current_visual || {};
+
+	const syncFromBridgeState = nextState => {
+		setStateData(nextState);
+		const nextLanguage = nextState?.settings?.language_id || 'en';
+		const nextLanguageIndex = uiModel.languages.findIndex(item => item.language_id === nextLanguage);
+		setLanguageIndex(nextLanguageIndex >= 0 ? nextLanguageIndex : 0);
+		const nextColor = nextState?.draft_visual?.color_id ?? nextState?.settings?.color_id ?? null;
+		const nextColorIndex = uiModel.colors.findIndex(item => item.color_id === nextColor);
+		setColorIndex(nextColorIndex >= 0 ? nextColorIndex : 0);
+		setSavedNickname(nextState?.settings?.nickname || '');
+	};
+
+	const performBridgeAction = (args, successMessage) => {
+		try {
+			const payload = runBridge(args);
+			if (payload.state) {
+				syncFromBridgeState(payload.state);
+			}
+			if (payload.result?.result_card?.detail) {
+				setMessage(payload.result.result_card.detail);
+				return;
+			}
+			setMessage(successMessage);
+		} catch (error) {
+			setMessage(`Action failed: ${error.message}`);
+		}
+	};
+
 	const draft = useMemo(() => {
 		const color = uiModel.colors[colorIndex] || null;
 		const language = uiModel.languages[languageIndex] || uiModel.languages[0];
@@ -242,6 +281,16 @@ function App({initialState, uiModel}) {
 					return;
 				}
 
+				if (itemId === 'apply') {
+					performBridgeAction(['apply'], 'Apply finished. Restart Claude Code to see the official Buddy update.');
+					return;
+				}
+
+				if (itemId === 'restore') {
+					performBridgeAction(['restore'], 'Restore finished.');
+					return;
+				}
+
 				setMessage(`${TOP_LEVEL_LABELS[itemId]} is not wired in the Ink prototype yet.`);
 			}
 
@@ -260,8 +309,9 @@ function App({initialState, uiModel}) {
 			}
 
 			if (isEnter(input, key)) {
+				const selected = uiModel.languages[languageIndex];
+				performBridgeAction(['set-language', selected.language_id], `Language set to ${selected.label}.`);
 				setScreen('main');
-				setMessage(`Language set to ${draft.languageLabel}.`);
 			}
 
 			return;
@@ -279,8 +329,9 @@ function App({initialState, uiModel}) {
 			}
 
 			if (isEnter(input, key)) {
+				const selected = uiModel.colors[colorIndex];
+				performBridgeAction(['set-color', selected.color_id], `Color saved as ${selected.label}.`);
 				setScreen('main');
-				setMessage(`Color draft set to ${draft.colorLabel || 'Default'}.`);
 			}
 
 			return;
@@ -288,10 +339,14 @@ function App({initialState, uiModel}) {
 
 		if (screen === 'nickname') {
 			if (isEnter(input, key)) {
-				setSavedNickname(nicknameInput.trim());
+				const nextNickname = nicknameInput.trim();
+				if (nextNickname) {
+					performBridgeAction(['set-nickname', nextNickname], 'Nickname saved.');
+				} else {
+					performBridgeAction(['clear-nickname'], 'Nickname cleared.');
+				}
 				setNicknameInput('');
 				setScreen('main');
-				setMessage('Nickname draft saved.');
 				return;
 			}
 
@@ -334,7 +389,9 @@ function App({initialState, uiModel}) {
 					{marginTop: 1, flexDirection: 'column'},
 					sectionTitle('Selection'),
 					inkText({color: 'gray'}, DETAILS[activeMenuId]),
-					inkText({color: 'gray'}, `Current: ${topLevelValue(activeMenuId, draft)}`)
+					(activeMenuId === 'language' || activeMenuId === 'color' || activeMenuId === 'nickname')
+						? inkText({color: 'gray'}, `Current: ${topLevelValue(activeMenuId, draft)}`)
+						: null
 				),
 				selectionPanel(screen, uiModel, languageIndex, colorIndex, nicknameInput)
 			),

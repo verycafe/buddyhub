@@ -12,6 +12,7 @@
   },
   "files": [
     "buddyhub",
+    "buddyhub_bridge.py",
     "buddyhub_tui.py",
     "buddyhub_core.py",
     "ink"
