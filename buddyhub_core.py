@@ -90,7 +90,7 @@ LANGUAGE_PRESETS: dict[str, dict[str, str]] = {
     "zh_cn": {"language_id": "zh_cn", "label": "中文"},
     "en": {"language_id": "en", "label": "English"},
     "ja": {"language_id": "ja", "label": "日本語"},
-    "zh_hans": {"language_id": "zh_hans", "label": "汉语"},
+    "ko": {"language_id": "ko", "label": "韩语"},
     "de": {"language_id": "de", "label": "Deutsch"},
     "fr": {"language_id": "fr", "label": "Français"},
     "ru": {"language_id": "ru", "label": "Русский"},
@@ -604,7 +604,7 @@ def default_customization_settings() -> dict[str, Any]:
 def normalize_nickname(value: str | None) -> str | None:
     if value is None:
         return None
-    cleaned = value.strip()
+    cleaned = "".join(ch for ch in str(value) if ch >= " " and ch != "\x7f").strip()
     return cleaned or None
 
 
@@ -642,6 +642,8 @@ def detect_system_language_id() -> str:
         return "zh_cn"
     if normalized.startswith("ja"):
         return "ja"
+    if normalized.startswith("ko"):
+        return "ko"
     if normalized.startswith("de"):
         return "de"
     if normalized.startswith("fr"):

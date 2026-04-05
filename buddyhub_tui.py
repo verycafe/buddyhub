@@ -59,7 +59,6 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "help_result": "Enter/Esc/q: return to menu",
         "nickname_prompt": "Enter nickname (leave blank to clear):",
         "nickname_current": "Current display name",
-        "nickname_draft": "Draft nickname",
         "nickname_input": "Input",
         "saved_language": "Language saved.",
         "saved_color": "Color saved.",
@@ -78,12 +77,9 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "status_header": "Status",
         "summary_header": "Summary",
         "installed_state": "Installed State",
-        "draft_state": "Draft State",
         "installed_preview": "Installed Preview",
-        "draft_preview": "Draft Preview",
-        "draft": "draft",
         "available": "available",
-        "color_menu_hint": "Pick a color. Enter saves the draft. Apply from the main menu.",
+        "color_menu_hint": "Pick a color. Enter saves the selection. Apply from the main menu.",
         "changes_label": "Changes",
         "changes_none": "none",
         "change_color": "color",
@@ -100,16 +96,16 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "message_no_restore": "Nothing to restore.",
         "detail_header": "Selection",
         "detail_language": "Switch the UI language for the BuddyHub configurator.",
-        "detail_color": "Choose the Buddy color. The draft preview updates immediately.",
-        "detail_nickname": "Set the displayed Buddy name. The draft preview updates while you type.",
-        "detail_apply": "Write the current draft to Claude Code. Restart Claude Code after applying.",
+        "detail_color": "Choose the Buddy color. The preview updates immediately.",
+        "detail_nickname": "Set the displayed Buddy name. The preview updates while you type.",
+        "detail_apply": "Write the current selection to Claude Code. Restart Claude Code after applying.",
         "detail_restore": "Restore the original official Buddy customization from backup.",
         "detail_uninstall": "Automatically restore the Buddy, clean old BuddyHub traces, and uninstall this BuddyHub copy.",
         "detail_quit": "Exit BuddyHub without applying new changes.",
         "detail_color_status": "Availability",
         "detail_color_reason": "Reason",
         "detail_language_hint": "The menu language changes immediately after selection.",
-        "detail_nickname_hint": "Press Enter to save the nickname draft, then Apply from the main menu.",
+        "detail_nickname_hint": "Press Enter to save the nickname, then Apply from the main menu.",
         "help_setup": "Up/Down: move  Enter: select  q: quit",
         "setup_intro": "BuddyHub could not fully detect your Claude Code installation. Use the setup menu to guide it.",
         "setup_binary": "Claude binary path",
@@ -184,7 +180,6 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "help_result": "回车/Esc/q：返回菜单",
         "nickname_prompt": "输入昵称（留空则清除）：",
         "nickname_current": "当前显示名",
-        "nickname_draft": "草稿昵称",
         "nickname_input": "输入框",
         "saved_language": "语言已保存。",
         "saved_color": "颜色已保存。",
@@ -203,12 +198,9 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "status_header": "状态",
         "summary_header": "摘要",
         "installed_state": "已安装状态",
-        "draft_state": "草稿状态",
         "installed_preview": "已安装预览",
-        "draft_preview": "草稿预览",
-        "draft": "草稿",
         "available": "可用",
-        "color_menu_hint": "选择颜色。回车保存到草稿，再回主菜单应用。",
+        "color_menu_hint": "选择颜色。回车保存当前选择，再回主菜单应用。",
         "changes_label": "变化",
         "changes_none": "无",
         "change_color": "颜色",
@@ -225,16 +217,16 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "message_no_restore": "当前没有可恢复的内容。",
         "detail_header": "当前选择",
         "detail_language": "切换 BuddyHub 配置器的界面语言。",
-        "detail_color": "选择 Buddy 颜色。草稿预览会立即更新。",
-        "detail_nickname": "设置 Buddy 显示名称。输入时草稿预览会立即更新。",
-        "detail_apply": "把当前草稿写入 Claude Code。应用后需要重启 Claude Code。",
+        "detail_color": "选择 Buddy 颜色。预览会立即更新。",
+        "detail_nickname": "设置 Buddy 显示名称。输入时预览会立即更新。",
+        "detail_apply": "把当前选择写入 Claude Code。应用后需要重启 Claude Code。",
         "detail_restore": "从备份恢复原始官方 Buddy 配置。",
         "detail_uninstall": "自动恢复 Buddy、清理旧 BuddyHub 痕迹，并卸载当前 BuddyHub 安装。",
         "detail_quit": "退出 BuddyHub，不应用新的更改。",
         "detail_color_status": "可用性",
         "detail_color_reason": "原因",
         "detail_language_hint": "选择后菜单语言会立刻切换。",
-        "detail_nickname_hint": "回车保存昵称草稿，然后回主菜单应用。",
+        "detail_nickname_hint": "回车保存昵称，然后回主菜单应用。",
         "help_setup": "上下键：移动  回车：选择  q：退出",
         "setup_intro": "BuddyHub 没有完整探测到当前机器上的 Claude Code，请先在设置里补全路径。",
         "setup_binary": "Claude 二进制路径",
@@ -277,7 +269,7 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "uninstall_removed_legacy": "已清理旧插件痕迹",
         "uninstall_source": "安装来源",
     },
-    "zh_hans": {},
+    "ko": {},
     "ja": {
         "title": "BuddyHub",
         "subtitle": "公式 Buddy 設定ツール",
@@ -306,7 +298,6 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "help_result": "Enter/Esc/q: メニューへ戻る",
         "nickname_prompt": "ニックネームを入力（空でクリア）:",
         "nickname_current": "現在の表示名",
-        "nickname_draft": "下書きニックネーム",
         "nickname_input": "入力欄",
         "saved_language": "言語を保存しました。",
         "saved_color": "色を保存しました。",
@@ -325,12 +316,9 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "status_header": "状態",
         "summary_header": "概要",
         "installed_state": "適用中の状態",
-        "draft_state": "下書き状態",
         "installed_preview": "適用中プレビュー",
-        "draft_preview": "下書きプレビュー",
-        "draft": "下書き",
         "available": "利用可",
-        "color_menu_hint": "色を選択。Enter で下書き保存、メインメニューで適用。",
+        "color_menu_hint": "色を選択。Enter で選択を保存し、メインメニューで適用します。",
         "changes_label": "変更点",
         "changes_none": "なし",
         "change_color": "色",
@@ -347,15 +335,15 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "message_no_restore": "復元する内容がありません。",
         "detail_header": "選択中",
         "detail_language": "BuddyHub 設定ツールの表示言語を切り替えます。",
-        "detail_color": "Buddy の色を選びます。下書きプレビューはすぐ更新されます。",
-        "detail_nickname": "Buddy の表示名を設定します。入力中に下書きプレビューが更新されます。",
-        "detail_apply": "現在の下書きを Claude Code に書き込みます。適用後は再起動が必要です。",
+        "detail_color": "Buddy の色を選びます。プレビューはすぐ更新されます。",
+        "detail_nickname": "Buddy の表示名を設定します。入力中にプレビューが更新されます。",
+        "detail_apply": "現在の選択を Claude Code に書き込みます。適用後は再起動が必要です。",
         "detail_restore": "バックアップから公式 Buddy 設定を復元します。",
         "detail_quit": "BuddyHub を終了し、新しい変更は適用しません。",
         "detail_color_status": "利用可否",
         "detail_color_reason": "理由",
         "detail_language_hint": "選択後すぐにメニュー言語が切り替わります。",
-        "detail_nickname_hint": "Enter でニックネーム下書きを保存し、メインメニューで適用します。",
+        "detail_nickname_hint": "Enter でニックネームを保存し、メインメニューで適用します。",
         "result_apply_title": "適用結果",
         "result_restore_title": "復元結果",
         "result_error_title": "操作結果",
@@ -393,7 +381,6 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "help_result": "Enter/Esc/q: zurück zum Menü",
         "nickname_prompt": "Spitznamen eingeben (leer = löschen):",
         "nickname_current": "Aktueller Anzeigename",
-        "nickname_draft": "Entwurfs-Spitzname",
         "nickname_input": "Eingabe",
         "saved_language": "Sprache gespeichert.",
         "saved_color": "Farbe gespeichert.",
@@ -412,12 +399,9 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "status_header": "Status",
         "summary_header": "Übersicht",
         "installed_state": "Installierter Zustand",
-        "draft_state": "Entwurfszustand",
         "installed_preview": "Installierte Vorschau",
-        "draft_preview": "Entwurfsvorschau",
-        "draft": "Entwurf",
         "available": "verfügbar",
-        "color_menu_hint": "Farbe wählen. Enter speichert den Entwurf, Anwenden im Hauptmenü.",
+        "color_menu_hint": "Farbe wählen. Enter speichert die Auswahl, Anwenden im Hauptmenü.",
         "changes_label": "Änderungen",
         "changes_none": "keine",
         "change_color": "Farbe",
@@ -434,15 +418,15 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "message_no_restore": "Es gibt nichts wiederherzustellen.",
         "detail_header": "Auswahl",
         "detail_language": "Wechselt die Sprache der BuddyHub-Oberfläche.",
-        "detail_color": "Wählt die Buddy-Farbe. Die Entwurfsvorschau aktualisiert sich sofort.",
-        "detail_nickname": "Setzt den angezeigten Buddy-Namen. Die Entwurfsvorschau reagiert beim Tippen.",
-        "detail_apply": "Schreibt den aktuellen Entwurf in Claude Code. Danach Claude Code neu starten.",
+        "detail_color": "Wählt die Buddy-Farbe. Die Vorschau aktualisiert sich sofort.",
+        "detail_nickname": "Setzt den angezeigten Buddy-Namen. Die Vorschau reagiert beim Tippen.",
+        "detail_apply": "Schreibt die aktuelle Auswahl in Claude Code. Danach Claude Code neu starten.",
         "detail_restore": "Stellt die ursprüngliche offizielle Buddy-Anpassung aus dem Backup wieder her.",
         "detail_quit": "Beendet BuddyHub ohne neue Änderungen anzuwenden.",
         "detail_color_status": "Verfügbarkeit",
         "detail_color_reason": "Grund",
         "detail_language_hint": "Die Menüsprache wechselt sofort nach der Auswahl.",
-        "detail_nickname_hint": "Mit Enter den Spitznamen-Entwurf speichern und dann im Hauptmenü anwenden.",
+        "detail_nickname_hint": "Mit Enter den Spitznamen speichern und dann im Hauptmenü anwenden.",
         "result_apply_title": "Anwendungsergebnis",
         "result_restore_title": "Wiederherstellung",
         "result_error_title": "Aktionsergebnis",
@@ -480,7 +464,6 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "help_result": "Entrée/Esc/q : retour au menu",
         "nickname_prompt": "Entrer le surnom (vide pour effacer) :",
         "nickname_current": "Nom affiché actuel",
-        "nickname_draft": "Surnom brouillon",
         "nickname_input": "Saisie",
         "saved_language": "Langue enregistrée.",
         "saved_color": "Couleur enregistrée.",
@@ -499,12 +482,9 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "status_header": "Statut",
         "summary_header": "Résumé",
         "installed_state": "État installé",
-        "draft_state": "État brouillon",
         "installed_preview": "Aperçu installé",
-        "draft_preview": "Aperçu brouillon",
-        "draft": "brouillon",
         "available": "disponible",
-        "color_menu_hint": "Choisissez une couleur. Entrée enregistre le brouillon, appliquez depuis le menu principal.",
+        "color_menu_hint": "Choisissez une couleur. Entrée enregistre la sélection, appliquez depuis le menu principal.",
         "changes_label": "Changements",
         "changes_none": "aucun",
         "change_color": "couleur",
@@ -521,15 +501,15 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "message_no_restore": "Rien à restaurer.",
         "detail_header": "Sélection",
         "detail_language": "Change la langue de l'interface BuddyHub.",
-        "detail_color": "Choisit la couleur du Buddy. Le brouillon se met à jour immédiatement.",
-        "detail_nickname": "Définit le nom affiché du Buddy. Le brouillon réagit pendant la saisie.",
-        "detail_apply": "Écrit le brouillon actuel dans Claude Code. Redémarrez ensuite Claude Code.",
+        "detail_color": "Choisit la couleur du Buddy. L'aperçu se met à jour immédiatement.",
+        "detail_nickname": "Définit le nom affiché du Buddy. L'aperçu réagit pendant la saisie.",
+        "detail_apply": "Écrit la sélection actuelle dans Claude Code. Redémarrez ensuite Claude Code.",
         "detail_restore": "Restaure la personnalisation officielle du Buddy depuis la sauvegarde.",
         "detail_quit": "Quitte BuddyHub sans appliquer de nouvelles modifications.",
         "detail_color_status": "Disponibilité",
         "detail_color_reason": "Raison",
         "detail_language_hint": "La langue du menu change immédiatement après la sélection.",
-        "detail_nickname_hint": "Appuyez sur Entrée pour enregistrer le surnom brouillon, puis appliquez-le depuis le menu principal.",
+        "detail_nickname_hint": "Appuyez sur Entrée pour enregistrer le surnom, puis appliquez-le depuis le menu principal.",
         "result_apply_title": "Résultat de l'application",
         "result_restore_title": "Résultat de la restauration",
         "result_error_title": "Résultat de l'action",
@@ -567,7 +547,6 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "help_result": "Enter/Esc/q: вернуться в меню",
         "nickname_prompt": "Введите ник (пусто = очистить):",
         "nickname_current": "Текущее отображаемое имя",
-        "nickname_draft": "Ник в черновике",
         "nickname_input": "Ввод",
         "saved_language": "Язык сохранён.",
         "saved_color": "Цвет сохранён.",
@@ -586,12 +565,9 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "status_header": "Статус",
         "summary_header": "Сводка",
         "installed_state": "Текущее состояние",
-        "draft_state": "Черновик",
         "installed_preview": "Текущий предпросмотр",
-        "draft_preview": "Предпросмотр черновика",
-        "draft": "черновик",
         "available": "доступно",
-        "color_menu_hint": "Выберите цвет. Enter сохранит черновик, затем примените из главного меню.",
+        "color_menu_hint": "Выберите цвет. Enter сохранит выбор, затем примените из главного меню.",
         "changes_label": "Изменения",
         "changes_none": "нет",
         "change_color": "цвет",
@@ -610,13 +586,13 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "detail_language": "Переключает язык интерфейса BuddyHub.",
         "detail_color": "Выбирает цвет Buddy. Черновой предпросмотр обновляется сразу.",
         "detail_nickname": "Задаёт отображаемое имя Buddy. Предпросмотр меняется во время ввода.",
-        "detail_apply": "Записывает текущий черновик в Claude Code. После этого перезапустите Claude Code.",
+        "detail_apply": "Записывает текущий выбор в Claude Code. После этого перезапустите Claude Code.",
         "detail_restore": "Восстанавливает исходную официальную настройку Buddy из резервной копии.",
         "detail_quit": "Выходит из BuddyHub без применения новых изменений.",
         "detail_color_status": "Доступность",
         "detail_color_reason": "Причина",
         "detail_language_hint": "Язык меню переключается сразу после выбора.",
-        "detail_nickname_hint": "Нажмите Enter, чтобы сохранить черновик ника, затем примените его из главного меню.",
+        "detail_nickname_hint": "Нажмите Enter, чтобы сохранить ник, затем примените его из главного меню.",
         "result_apply_title": "Результат применения",
         "result_restore_title": "Результат восстановления",
         "result_error_title": "Результат действия",
@@ -628,18 +604,19 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
     },
 }
 
-LANGUAGE_PACKS["zh_hans"] = dict(LANGUAGE_PACKS["zh_cn"])
+LANGUAGE_PACKS["ko"] = dict(LANGUAGE_PACKS["en"])
 for _language_id, _pack in LANGUAGE_PACKS.items():
     if _language_id == "en":
         continue
     for _key, _value in LANGUAGE_PACKS["en"].items():
         _pack.setdefault(_key, _value)
 
-LANGUAGE_ORDER = ["zh_cn", "en", "ja", "zh_hans", "de", "fr", "ru"]
+LANGUAGE_ORDER = ["zh_cn", "en", "ja", "ko", "de", "fr", "ru"]
 TOP_LEVEL_MENU = ["language", "color", "nickname", "apply", "restore", "uninstall", "quit"]
 VISIBLE_ELEMENT_CONTROLS = False
 SETUP_MENU = ["binary", "config", "retry", "continue", "quit"]
 ENTER_KEYS = (curses.KEY_ENTER, 10, 13, "\n", "\r")
+ESC_KEYS = (27, "\x1b")
 
 
 class BuddyHubTUI:
@@ -656,6 +633,7 @@ class BuddyHubTUI:
         self.exit_notice: str | None = None
         self.nickname_buffer = ""
         self.path_buffer = ""
+        self.cursor_position: tuple[int, int] | None = None
         self.running = True
         self.settings = load_customization_settings()
         self.lang = str(self.settings.get("language_id") or "en")
@@ -957,30 +935,14 @@ class BuddyHubTUI:
         if self.screen == "main":
             item_id = TOP_LEVEL_MENU[self.selection["main"]]
             if item_id == "language":
-                return [
-                    self.tr("detail_language")[:width],
-                    f"{self.tr('selected_language')}: {self.language_option_label(str(self.settings.get('language_id') or 'en'))}"[:width],
-                ]
+                return [self.tr("detail_language")[:width]]
             if item_id == "color":
-                current_color = self.color_option_label(self.current_visual["color_id"]) if self.current_visual.get("color_id") else self.tr("default_color")
-                draft_color = self.color_option_label(self.draft_visual["color_id"]) if self.draft_visual.get("color_id") else self.tr("default_color")
-                return [
-                    self.tr("detail_color")[:width],
-                    f"{self.tr('current')}: {current_color}"[:width],
-                    f"{self.tr('draft')}: {draft_color}"[:width],
-                ]
+                return [self.tr("detail_color")[:width]]
             if item_id == "nickname":
-                current_name = str(self.current_visual.get("name") or self.tr("value_unknown"))
-                draft_name = str(self.draft_visual.get("name") or current_name)
-                return [
-                    self.tr("detail_nickname")[:width],
-                    f"{self.tr('current')}: {current_name}"[:width],
-                    f"{self.tr('draft')}: {draft_name}"[:width],
-                ]
+                return [self.tr("detail_nickname")[:width]]
             if item_id == "apply":
                 return [
                     self.tr("detail_apply")[:width],
-                    f"{self.tr('changes_label')}: {', '.join(self.draft_change_labels()) or self.tr('changes_none')}"[:width],
                     f"{self.tr('status_pending_changes')}: {self.tr('status_yes') if self.has_pending_changes() else self.tr('status_no')}"[:width],
                 ]
             if item_id == "restore":
@@ -1221,13 +1183,22 @@ class BuddyHubTUI:
     def render(self, stdscr: Any) -> None:
         stdscr.erase()
         self.ensure_color_pairs()
+        self.cursor_position = None
         height, width = stdscr.getmaxyx()
         if self.screen == "result":
             self.render_result(stdscr, height, width)
+            if self.cursor_position:
+                try:
+                    stdscr.move(*self.cursor_position)
+                except curses.error:
+                    pass
             stdscr.refresh()
             return
         menu_width = min(34, max(28, width // 3))
         divider_x = menu_width + 4
+        preview_visual = self.preview_draft_visual()
+        pending_changes = self.has_pending_changes(preview_visual)
+        restore_ready = self.has_restore_target()
 
         stdscr.addstr(0, 2, self.tr("title"), curses.A_BOLD)
         stdscr.addstr(1, 2, self.tr("subtitle"))
@@ -1236,13 +1207,13 @@ class BuddyHubTUI:
         buddy_species = self.current_visual.get("species") or self.tr("value_unknown")
         status_line = (
             f"{self.tr('buddy_identity')}: {buddy_name} / {buddy_species}   "
-            f"{self.tr('status_pending_changes')}: {self.tr('status_yes') if self.has_pending_changes() else self.tr('status_no')}   "
-            f"{self.tr('status_restore')}: {self.tr('status_yes') if self.has_restore_target() else self.tr('status_no')}"
+            f"{self.tr('status_pending_changes')}: {self.tr('status_yes') if pending_changes else self.tr('status_no')}   "
+            f"{self.tr('status_restore')}: {self.tr('status_yes') if restore_ready else self.tr('status_no')}"
         )
         self.safe_addstr(stdscr, 2, 2, status_line[: max(0, width - 4)], curses.A_DIM)
 
-        self.render_menu(stdscr, 4, 2, menu_width, height - 7)
-        self.render_preview(stdscr, 4, divider_x, width - divider_x - 2, height - 7)
+        self.render_menu(stdscr, 4, 2, menu_width, height - 7, preview_visual, pending_changes, restore_ready)
+        self.render_preview(stdscr, 4, divider_x, width - divider_x - 2, height - 7, preview_visual, pending_changes, restore_ready)
 
         help_text = {
             "main": self.tr("help_main"),
@@ -1257,6 +1228,11 @@ class BuddyHubTUI:
         message = self.message or self.tr("restart_note")
         self.safe_addstr(stdscr, height - 2, 2, help_text[: max(0, width - 4)])
         self.safe_addstr(stdscr, height - 1, 2, message[: max(0, width - 4)])
+        if self.cursor_position:
+            try:
+                stdscr.move(*self.cursor_position)
+            except curses.error:
+                pass
         stdscr.refresh()
 
     def safe_addstr(self, stdscr: Any, y: int, x: int, text: str, attr: int = 0) -> None:
@@ -1320,7 +1296,17 @@ class BuddyHubTUI:
             row += 1
         self.safe_addstr(stdscr, start_y + card_height - 2, start_x + 2, footer_line[: max(0, width - 4)], curses.A_DIM)
 
-    def render_menu(self, stdscr: Any, start_y: int, start_x: int, width: int, height: int) -> None:
+    def render_menu(
+        self,
+        stdscr: Any,
+        start_y: int,
+        start_x: int,
+        width: int,
+        height: int,
+        preview_visual: dict[str, Any],
+        pending_changes: bool,
+        restore_ready: bool,
+    ) -> None:
         self.safe_box(stdscr, start_y, start_x, width, max(6, height))
         inner_x = start_x + 2
         inner_width = max(8, width - 4)
@@ -1353,8 +1339,8 @@ class BuddyHubTUI:
                     if (item_id == "color" and self.color_changed()) or (item_id == "nickname" and self.nickname_changed()):
                         attr = curses.A_BOLD
                 if item_id == "apply":
-                    attr = curses.A_BOLD if self.has_pending_changes() else curses.A_DIM
-                elif item_id == "restore" and not self.has_restore_target():
+                    attr = curses.A_BOLD if pending_changes else curses.A_DIM
+                elif item_id == "restore" and not restore_ready:
                     attr = curses.A_DIM
                 lines.append((text, index == selected, attr))
         elif self.screen == "language":
@@ -1368,16 +1354,14 @@ class BuddyHubTUI:
         elif self.screen == "color":
             self.safe_addstr(stdscr, start_y + 3, inner_x, self.tr("color_menu_hint")[:inner_width])
             selected = self.selection["color"]
-            preview_visual = self.preview_draft_visual()
-            for index, entry in enumerate(self.color_menu_entries()):
+            color_entries = self.color_menu_entries()
+            for index, entry in enumerate(color_entries):
                 color_id = entry["color_id"]
                 marker = "›" if index == selected else " "
                 label = f"{marker} {self.color_chip(color_id)} {entry['label']}"
                 suffix = []
                 if self.settings.get("color_id") == color_id:
                     suffix.append(self.tr("current"))
-                if preview_visual.get("color_id") == color_id and self.current_visual.get("color_id") != color_id:
-                    suffix.append(self.tr("draft"))
                 if not entry["available"]:
                     suffix.append(self.tr("unavailable"))
                 elif color_id is not None:
@@ -1393,19 +1377,10 @@ class BuddyHubTUI:
                     0,
                 )
             )
-            lines.append(
-                (
-                    f"{self.tr('nickname_draft')}: {self.settings.get('nickname') or self.tr('value_none')}",
-                    False,
-                    0,
-                )
-            )
             lines.append(("", False, 0))
             lines.append((self.tr("nickname_prompt"), False, 0))
             buffer = self.nickname_buffer
-            if not buffer:
-                buffer = self.settings.get("nickname") or ""
-            lines.append((f"› {self.tr('nickname_input')}: {buffer or '…'}", True, 0))
+            lines.append((f"› {self.tr('nickname_input')}: {buffer or ''}", True, 0))
         elif self.screen in {"setup_binary_input", "setup_config_input"}:
             path_key = "claude_binary_path" if self.screen == "setup_binary_input" else "claude_json_path"
             prompt_key = "setup_binary_prompt" if self.screen == "setup_binary_input" else "setup_config_prompt"
@@ -1431,6 +1406,12 @@ class BuddyHubTUI:
         for text, highlighted, base_attr in lines[: max_list_lines]:
             attr = base_attr | (curses.A_REVERSE if highlighted else 0)
             self.safe_addstr(stdscr, y, inner_x, text[:inner_width], attr)
+            if self.screen == "nickname" and highlighted and text.startswith("› "):
+                cursor_x = min(inner_x + len(f"› {self.tr('nickname_input')}: ") + len(self.nickname_buffer), start_x + width - 2)
+                self.cursor_position = (y, cursor_x)
+            elif self.screen in {"setup_binary_input", "setup_config_input"} and highlighted and text.startswith("› "):
+                cursor_x = min(inner_x + len(f"› {self.tr('nickname_input')}: ") + len(self.path_buffer), start_x + width - 2)
+                self.cursor_position = (y, cursor_x)
             y += 1
         if detail_lines:
             detail_y = start_y + height - detail_block_height
@@ -1441,19 +1422,26 @@ class BuddyHubTUI:
                 self.safe_addstr(stdscr, row, inner_x, line[:inner_width], curses.A_DIM)
                 row += 1
 
-    def render_preview(self, stdscr: Any, start_y: int, start_x: int, width: int, height: int) -> None:
+    def render_preview(
+        self,
+        stdscr: Any,
+        start_y: int,
+        start_x: int,
+        width: int,
+        height: int,
+        preview_visual: dict[str, Any],
+        pending_changes: bool,
+        restore_ready: bool,
+    ) -> None:
         customization = self.inspection.get("customization") or {}
         current_profile = self.inspection.get("current_profile") or {}
         companion = self.inspection.get("companion_config") or {}
-        preview_visual = self.preview_draft_visual()
         draft_element = preview_visual.get("element_id") or self.tr("value_none")
         current_element = current_profile.get("element_id") or self.current_visual.get("element_id") or self.tr("value_none")
         lines = [
             f"- {self.tr('selected_language')}: {self.language_option_label(str(self.settings.get('language_id') or 'en'))}",
             f"- {self.tr('apply_ready')}: {self.tr('status_yes') if bool(self.inspection.get('profile_match')) else self.tr('status_no')}",
-            f"- {self.tr('changes_label')}: {', '.join(self.draft_change_labels(preview_visual)) or self.tr('changes_none')}",
-            f"- {self.tr('status_pending_changes')}: {self.tr('status_yes') if self.has_pending_changes(preview_visual) else self.tr('status_no')}",
-            f"- {self.tr('status_restore')}: {self.tr('status_yes') if self.has_restore_target() else self.tr('status_no')}",
+            f"- {self.tr('status_restore')}: {self.tr('status_yes') if restore_ready else self.tr('status_no')}",
         ]
         warnings = customization.get("apply_warnings") or []
         blockers = customization.get("apply_blockers") or []
@@ -1485,7 +1473,7 @@ class BuddyHubTUI:
         panel_width = width
         panel_height = max(16, 10 + len(preview_lines) + (2 if personality else 0))
         self.safe_box(stdscr, panel_y, start_x, panel_width, panel_height)
-        title = f"{self.tr('preview')} [{self.tr('draft') if self.has_pending_changes(preview_visual) else self.tr('current')}]"
+        title = self.tr("preview")
         self.safe_addstr(stdscr, panel_y + 1, start_x + 2, title[: max(0, panel_width - 4)], curses.A_BOLD)
         self.safe_addstr(stdscr, panel_y + 2, start_x + 2, preview_color[: max(0, panel_width - 4)], preview_attr | curses.A_BOLD)
         species_x = start_x + max(2, panel_width - 2 - len(preview_species))
@@ -1502,7 +1490,8 @@ class BuddyHubTUI:
             quoted = f"\"{personality}\""
             self.safe_addstr(stdscr, row, start_x + 2, quoted[: max(0, panel_width - 4)], curses.A_DIM)
             row += 2
-        self.safe_addstr(stdscr, panel_y + panel_height - 2, start_x + 2, f"{self.tr('installed_element')}: {current_element}"[: max(0, panel_width - 4)], curses.A_DIM)
+        footer_element = draft_element if pending_changes else current_element
+        self.safe_addstr(stdscr, panel_y + panel_height - 2, start_x + 2, f"{self.tr('installed_element')}: {footer_element}"[: max(0, panel_width - 4)], curses.A_DIM)
 
     def render_result(self, stdscr: Any, height: int, width: int) -> None:
         card = self.result_card or {}
@@ -1571,12 +1560,12 @@ class BuddyHubTUI:
             self.handle_path_key(key)
             return
         if self.screen == "result":
-            if key in ("q", "Q", 27, *ENTER_KEYS):
+            if key in ("q", "Q", *ESC_KEYS, *ENTER_KEYS):
                 self.screen = "main"
                 self.result_card = None
             return
 
-        if key in ("q", "Q", 27):
+        if key in ("q", "Q", *ESC_KEYS):
             if self.screen == "main":
                 self.running = False
             elif self.screen == "setup":
@@ -1611,7 +1600,7 @@ class BuddyHubTUI:
                     self.selection["color"] = self.current_color_index()
             elif item_id == "nickname":
                 self.screen = "nickname"
-                self.nickname_buffer = str(self.settings.get("nickname") or "")
+                self.nickname_buffer = ""
             elif item_id == "apply":
                 if not self.has_pending_changes():
                     self.set_message(self.tr("message_no_pending_changes"))
@@ -1662,7 +1651,7 @@ class BuddyHubTUI:
             self.screen = "main"
 
     def handle_nickname_key(self, key: Any) -> None:
-        if key == 27:
+        if key in ESC_KEYS:
             self.screen = "main"
             self.nickname_buffer = ""
             return
@@ -1678,7 +1667,7 @@ class BuddyHubTUI:
             self.nickname_buffer += key
 
     def handle_path_key(self, key: Any) -> None:
-        if key == 27:
+        if key in ESC_KEYS:
             self.screen = "setup"
             self.path_buffer = ""
             return
@@ -1709,9 +1698,12 @@ class BuddyHubTUI:
             self.path_buffer += key
 
     def run(self, stdscr: Any) -> None:
-        curses.curs_set(0)
         stdscr.keypad(True)
         while self.running:
+            try:
+                curses.curs_set(1 if self.screen in {"nickname", "setup_binary_input", "setup_config_input"} else 0)
+            except curses.error:
+                pass
             self.render(stdscr)
             key = stdscr.get_wch()
             self.handle_key(key)
