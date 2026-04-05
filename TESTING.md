@@ -71,8 +71,8 @@ Verify:
 
 - selecting a supported element is saved
 - switching from one supported element to another reuses the clean backup and does not require a manual restore step in between
-- selecting verified `orange` is saved and can be applied
-- selecting an unverified color is saved but remains pending
+- selecting verified `green`, `orange`, `blue`, `pink`, `purple`, `red`, or `black` is saved and can be applied
+- selecting `white` is saved but remains pending
 - setting a nickname is saved and can be applied through `~/.claude.json` on the current validated macOS target
 - `/buddyhub:settings --reset` returns to the default supported configuration
 

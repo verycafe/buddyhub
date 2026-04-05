@@ -72,11 +72,18 @@ COLOR_PRESETS: dict[str, dict[str, Any]] = {
     "green": {"color_id": "green", "label": "Green", "hex": "#4ecb71"},
     "red": {"color_id": "red", "label": "Red", "hex": "#ff5b5b"},
     "black": {"color_id": "black", "label": "Black", "hex": "#111111"},
+    "white": {"color_id": "white", "label": "White", "hex": "#f5f5f5"},
     "purple": {"color_id": "purple", "label": "Purple", "hex": "#9a67ff"},
 }
 
 COLOR_PATCH_PRESETS: dict[str, dict[str, dict[str, Any]]] = {
     "2.1.92": {
+        "green": {
+            "color_id": "green",
+            "label": "Green",
+            "description": "Keep the current verified default green Buddy accent.",
+            "replacements": [],
+        },
         "orange": {
             "color_id": "orange",
             "label": "Orange",
@@ -85,6 +92,66 @@ COLOR_PATCH_PRESETS: dict[str, dict[str, dict[str, Any]]] = {
                 {
                     "old": b'uncommon:"success"',
                     "new": b'uncommon:"warning"',
+                    "expected_matches": 2,
+                }
+            ],
+        },
+        "blue": {
+            "color_id": "blue",
+            "label": "Blue",
+            "description": "Retint the active success RGB token to a verified blue accent on the current target.",
+            "replacements": [
+                {
+                    "old": b'success:"rgb(78,186,101)"',
+                    "new": b'success:"rgb(78,120,255)"',
+                    "expected_matches": 2,
+                }
+            ],
+        },
+        "pink": {
+            "color_id": "pink",
+            "label": "Pink",
+            "description": "Retint the active success RGB token to a verified pink accent on the current target.",
+            "replacements": [
+                {
+                    "old": b'success:"rgb(78,186,101)"',
+                    "new": b'success:"rgb(255,80,120)"',
+                    "expected_matches": 2,
+                }
+            ],
+        },
+        "purple": {
+            "color_id": "purple",
+            "label": "Purple",
+            "description": "Retint the active success RGB token to a verified purple accent on the current target.",
+            "replacements": [
+                {
+                    "old": b'success:"rgb(78,186,101)"',
+                    "new": b'success:"rgb(180,80,255)"',
+                    "expected_matches": 2,
+                }
+            ],
+        },
+        "red": {
+            "color_id": "red",
+            "label": "Red",
+            "description": "Retint the active success RGB token to a verified red accent on the current target.",
+            "replacements": [
+                {
+                    "old": b'success:"rgb(78,186,101)"',
+                    "new": b'success:"rgb(255,060,60)"',
+                    "expected_matches": 2,
+                }
+            ],
+        },
+        "black": {
+            "color_id": "black",
+            "label": "Black",
+            "description": "Retint the active success RGB token to a verified black accent on the current target.",
+            "replacements": [
+                {
+                    "old": b'success:"rgb(78,186,101)"',
+                    "new": b'success:"rgb(000,000,00)"',
                     "expected_matches": 2,
                 }
             ],
@@ -160,7 +227,7 @@ def blob_top_row_profile(
         "species": "blob",
         "element_id": element_id,
         "slot": "top",
-        "supports_colors": ["orange"],
+        "supports_colors": ["green", "orange", "blue", "pink", "purple", "red", "black"],
         "nickname_supported": False,
         "preview_lines": [
             top_row,
@@ -195,7 +262,7 @@ def blob_body_row_profile(
         "species": "blob",
         "element_id": element_id,
         "slot": "front",
-        "supports_colors": ["orange"],
+        "supports_colors": ["green", "orange", "blue", "pink", "purple", "red", "black"],
         "nickname_supported": False,
         "preview_lines": [
             "            ",

@@ -269,22 +269,24 @@ V1 预设色包括：
 - 绿色
 - 红色
 - 黑色
+- 白色
 - 紫色
 
 颜色只应用于已验证可补丁的视觉槽位。
 
 当前已验证：
 
+- `green` 作为当前默认绿色可在当前 `2.1.92 + blob` 目标上保留生效
 - `orange` 可在当前 `2.1.92 + blob` 目标上通过原生 color-token patch 生效
+- `blue` 可在当前 `2.1.92 + blob` 目标上通过已验证的 success RGB patch 生效
+- `pink` 可在当前 `2.1.92 + blob` 目标上通过已验证的 success RGB patch 生效
+- `purple` 可在当前 `2.1.92 + blob` 目标上通过已验证的 success RGB patch 生效
+- `red` 可在当前 `2.1.92 + blob` 目标上通过已验证的 success RGB patch 生效
+- `black` 可在当前 `2.1.92 + blob` 目标上通过已验证的 success RGB patch 生效
 
 当前仍未验证：
 
-- 粉色
-- 蓝色
-- 绿色
-- 红色
-- 黑色
-- 紫色
+- 白色
 
 ### 9.4 昵称模型
 

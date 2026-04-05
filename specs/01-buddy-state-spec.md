@@ -147,14 +147,17 @@ The initial preset list is:
 - green
 - red
 - black
+- white
 - purple
 
 A preset may be offered only when the current patch target has a validated color slot for it.
 
 On the current validated target:
 
+- `green` is verified as the default active Buddy accent
 - `orange` is verified on `2.1.92` by remapping the current uncommon Buddy accent token from `success` to `warning`
-- all other presets remain unavailable until their own native patch points are verified
+- `blue`, `pink`, `purple`, `red`, and `black` are verified on `2.1.92` by retinting the active success RGB token used by the current target
+- `white` remains unavailable until a real native patch point is verified
 
 ## 10. Nickname Model
 
