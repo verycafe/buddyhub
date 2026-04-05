@@ -1,1 +1,0 @@
-"""BuddyHub plugin support package."""

@@ -7,14 +7,16 @@ import json
 import locale
 from typing import Any
 
-from plugins.buddyhub.scripts.buddyhublib import (
+from buddyhub_core import (
     COLOR_PRESETS,
     LANGUAGE_PRESETS,
     apply_installed_patch,
+    cleanup_legacy_plugin_traces,
     inspect_native_patch,
     load_customization_settings,
     preview_lines_for_customization,
     restore_native_patch,
+    schedule_self_uninstall,
     update_customization_settings,
 )
 
@@ -29,6 +31,7 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "menu_nickname": "Nickname",
         "menu_apply": "Apply",
         "menu_restore": "Restore",
+        "menu_uninstall": "Uninstall",
         "menu_quit": "Quit",
         "screen_language": "Language Menu",
         "screen_color": "Color Menu",
@@ -94,6 +97,7 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "detail_nickname": "Set the displayed Buddy name. The draft preview updates while you type.",
         "detail_apply": "Write the current draft to Claude Code. Restart Claude Code after applying.",
         "detail_restore": "Restore the original official Buddy customization from backup.",
+        "detail_uninstall": "Automatically restore the Buddy, clean old BuddyHub traces, and uninstall this BuddyHub copy.",
         "detail_quit": "Exit BuddyHub without applying new changes.",
         "detail_color_status": "Availability",
         "detail_color_reason": "Reason",
@@ -101,12 +105,16 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "detail_nickname_hint": "Press Enter to save the nickname draft, then Apply from the main menu.",
         "result_apply_title": "Apply Result",
         "result_restore_title": "Restore Result",
+        "result_uninstall_title": "Uninstall Result",
         "result_error_title": "Action Result",
         "result_status": "Status",
         "result_next_step": "Next step",
         "result_restart_needed": "Restart Claude Code to reload the official Buddy.",
         "result_restore_ready": "The original Buddy state has been restored.",
+        "result_uninstall_started": "BuddyHub cleanup has been scheduled. This window will now close.",
         "result_return_hint": "Press Enter, Esc, or q to return to the main menu.",
+        "uninstall_removed_legacy": "Removed legacy plugin traces",
+        "uninstall_source": "Install source",
     },
     "zh_cn": {
         "title": "BuddyHub",
@@ -116,6 +124,7 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "menu_nickname": "昵称",
         "menu_apply": "应用",
         "menu_restore": "恢复",
+        "menu_uninstall": "卸载",
         "menu_quit": "退出",
         "screen_language": "语言菜单",
         "screen_color": "颜色菜单",
@@ -181,6 +190,7 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "detail_nickname": "设置 Buddy 显示名称。输入时草稿预览会立即更新。",
         "detail_apply": "把当前草稿写入 Claude Code。应用后需要重启 Claude Code。",
         "detail_restore": "从备份恢复原始官方 Buddy 配置。",
+        "detail_uninstall": "自动恢复 Buddy、清理旧 BuddyHub 痕迹，并卸载当前 BuddyHub 安装。",
         "detail_quit": "退出 BuddyHub，不应用新的更改。",
         "detail_color_status": "可用性",
         "detail_color_reason": "原因",
@@ -188,12 +198,16 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "detail_nickname_hint": "回车保存昵称草稿，然后回主菜单应用。",
         "result_apply_title": "应用结果",
         "result_restore_title": "恢复结果",
+        "result_uninstall_title": "卸载结果",
         "result_error_title": "操作结果",
         "result_status": "状态",
         "result_next_step": "下一步",
         "result_restart_needed": "请重启 Claude Code 以重新加载官方 Buddy。",
         "result_restore_ready": "原始 Buddy 状态已恢复。",
+        "result_uninstall_started": "BuddyHub 清理已安排完成，窗口即将关闭。",
         "result_return_hint": "按回车、Esc 或 q 返回主菜单。",
+        "uninstall_removed_legacy": "已清理旧插件痕迹",
+        "uninstall_source": "安装来源",
     },
     "zh_hans": {},
     "ja": {
@@ -547,9 +561,14 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
 }
 
 LANGUAGE_PACKS["zh_hans"] = dict(LANGUAGE_PACKS["zh_cn"])
+for _language_id, _pack in LANGUAGE_PACKS.items():
+    if _language_id == "en":
+        continue
+    for _key, _value in LANGUAGE_PACKS["en"].items():
+        _pack.setdefault(_key, _value)
 
 LANGUAGE_ORDER = ["zh_cn", "en", "ja", "zh_hans", "de", "fr", "ru"]
-TOP_LEVEL_MENU = ["language", "color", "nickname", "apply", "restore", "quit"]
+TOP_LEVEL_MENU = ["language", "color", "nickname", "apply", "restore", "uninstall", "quit"]
 VISIBLE_ELEMENT_CONTROLS = False
 
 
@@ -563,6 +582,7 @@ class BuddyHubTUI:
         }
         self.message = ""
         self.result_card: dict[str, Any] | None = None
+        self.exit_notice: str | None = None
         self.nickname_buffer = ""
         self.running = True
         self.settings = load_customization_settings()
@@ -669,6 +689,7 @@ class BuddyHubTUI:
             "nickname": self.tr("menu_nickname"),
             "apply": self.tr("menu_apply"),
             "restore": self.tr("menu_restore"),
+            "uninstall": self.tr("menu_uninstall"),
             "quit": self.tr("menu_quit"),
         }[item_id]
 
@@ -757,6 +778,8 @@ class BuddyHubTUI:
             return self.tr("menu_state_pending") if self.has_pending_changes() else self.tr("menu_state_clean")
         if item_id == "restore":
             return self.tr("menu_state_restore_ready") if self.has_restore_target() else self.tr("menu_state_restore_empty")
+        if item_id == "uninstall":
+            return ""
         return ""
 
     def menu_detail_lines(self, width: int) -> list[str]:
@@ -795,6 +818,8 @@ class BuddyHubTUI:
                     self.tr("detail_restore")[:width],
                     f"{self.tr('status_restore')}: {self.tr('status_yes') if self.has_restore_target() else self.tr('status_no')}"[:width],
                 ]
+            if item_id == "uninstall":
+                return [self.tr("detail_uninstall")[:width]]
             return [self.tr("detail_quit")[:width]]
         if self.screen == "language":
             label = self.language_option_label(LANGUAGE_ORDER[self.selection["language"]])
@@ -974,6 +999,36 @@ class BuddyHubTUI:
                 self.tr("result_restore_ready"),
                 self.result_summary_lines(before_visual, self.current_visual),
             )
+        except Exception as exc:  # noqa: BLE001
+            detail = f"{self.tr('action_failed')}: {exc}"
+            self.set_message(detail)
+            self.show_result("result_error_title", "error", detail)
+
+    def do_uninstall(self) -> None:
+        summary_lines: list[str] = []
+        try:
+            if self.has_restore_target():
+                before_visual = dict(self.current_visual)
+                restore_native_patch()
+                self.refresh()
+                summary_lines.extend(self.result_summary_lines(before_visual, self.current_visual))
+            removed_paths = cleanup_legacy_plugin_traces()
+            uninstall_job = schedule_self_uninstall(remove_data_root=True)
+            if removed_paths:
+                summary_lines.append(f"{self.tr('uninstall_removed_legacy')}: {len(removed_paths)}")
+            summary_lines.append(
+                f"{self.tr('uninstall_source')}: {uninstall_job['install_context']['source']}"
+            )
+            self.exit_notice = self.tr("result_uninstall_started")
+            self.set_message(self.exit_notice)
+            self.show_result(
+                "result_uninstall_title",
+                "ok",
+                self.tr("result_uninstall_started"),
+                None,
+                summary_lines,
+            )
+            self.running = False
         except Exception as exc:  # noqa: BLE001
             detail = f"{self.tr('action_failed')}: {exc}"
             self.set_message(detail)
@@ -1381,6 +1436,8 @@ class BuddyHubTUI:
                     self.set_message(self.tr("message_no_restore"))
                     return
                 self.do_restore()
+            elif item_id == "uninstall":
+                self.do_uninstall()
             elif item_id == "quit":
                 self.running = False
             return
@@ -1464,6 +1521,8 @@ def main() -> int:
 
     app = BuddyHubTUI()
     curses.wrapper(app.run)
+    if app.exit_notice:
+        print(app.exit_notice)
     return 0
 
 

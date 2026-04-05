@@ -125,6 +125,7 @@ buddyhub
 - `Nickname`
 - `Apply`
 - `Restore`
+- `Uninstall`
 - `Quit`
 
 当前阶段范围说明：
@@ -142,6 +143,12 @@ TUI 会先读取本机当前已安装 Buddy 的真实状态，然后显示：
 结果卡还会汇总这次真正改动了哪些官方 Buddy 可见属性，例如：
 - `Display name`
 - `Color`
+
+`Uninstall` 现在是全自动的：
+- 如果 BuddyHub 当前有补丁，会先自动恢复
+- 自动删除旧的 Claude 插件痕迹，例如 `~/.claude/plugins/.../buddyhub*`
+- 自动删除 BuddyHub 独立数据目录 `~/.buddyhub`
+- 如果 BuddyHub 是通过 `pip`、`npm` 或 `brew` 安装的，会自动在后台安排卸载
 
 如果想快速做一次非交互检查：
 

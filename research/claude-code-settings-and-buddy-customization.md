@@ -38,7 +38,7 @@ Confidence: `Official` + `Local runtime`
 Relevant evidence:
 
 - [/Users/tvwoo/.claude/cache/changelog.md](/Users/tvwoo/.claude/cache/changelog.md)
-- [/Users/tvwoo/Projects/buddyhub/plugins/buddyhub/.claude-plugin/plugin.json](/Users/tvwoo/Projects/buddyhub/plugins/buddyhub/.claude-plugin/plugin.json)
+- historical BuddyHub plugin manifest from the now-removed plugin prototype
 
 ### 2. Slash commands are real, but command output is not a verified native control surface
 
@@ -63,7 +63,7 @@ Confidence: `Official` + `Local runtime` + `Product lesson`
 
 Relevant evidence:
 
-- [/Users/tvwoo/Projects/buddyhub/plugins/buddyhub/commands/settings.md](/Users/tvwoo/Projects/buddyhub/plugins/buddyhub/commands/settings.md)
+- the historical BuddyHub plugin command prototype used plain command files and text output
 - [/Users/tvwoo/.claude/cache/changelog.md](/Users/tvwoo/.claude/cache/changelog.md)
 
 ### 2.1 Hierarchical menus for third-party plugin commands are not yet verified
@@ -91,7 +91,7 @@ What was not found in verified plugin-facing schema evidence:
 Product implication:
 
 - BuddyHub must not claim `/buddyhub` can currently be turned into a first-party-feeling hierarchical menu unless that behavior is directly proven
-- if a menu UX is required, the current proven native path is still `/config > BuddyHub`
+- if a menu UX is required, an external TUI is currently the only BuddyHub path we have fully productized
 
 Confidence: `Official` + `Local runtime` + `Reverse-engineered`
 
@@ -245,7 +245,7 @@ We repeatedly learned that a long text settings page or chat-guided prompt is no
 
 Correct rule:
 
-- if the native UI is really `/config > BuddyHub`, say that directly
+- if the UI is really an external TUI, say that directly
 - do not market a text output page as a native menu
 - do not promise clickable in-command controls until proven
 
@@ -285,7 +285,7 @@ Confidence: `Product lesson` + `Local runtime`
 The long architecture report was useful mainly in these ways:
 
 - it reinforced that Claude Code uses layered configuration, not one flat config file
-- it pointed directly at `manifest.userConfig` and plugin settings architecture as first-class concepts
+- it pointed directly at plugin settings architecture as a useful research lead, even though BuddyHub no longer ships as a Claude plugin
 - it made clear that internal UI/state systems are much richer than the public plugin surface
 - it supported a more disciplined distinction between:
   - public plugin capability

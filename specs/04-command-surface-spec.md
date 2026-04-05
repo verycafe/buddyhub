@@ -5,89 +5,70 @@
 
 ## 1. Purpose
 
-Define the minimum command surface that supports official Buddy visual customization.
+Define the minimum external control surface that supports official Buddy visual customization.
 
-Commands are supporting tools.
+The standalone TUI menu is the primary control surface.
 
-They exist to:
+It exists to:
 
 - open customization settings
 - inspect the current install
 - back up and patch the native Buddy target
 - restore the original file
+- uninstall BuddyHub cleanly
 - diagnose failures
 
-## 2. Command Design Principles
+## 2. Surface Design Principles
 
-Commands must be:
+The control surface must be:
 
 - explicit
 - low-risk
 - reversible where applicable
 - honest about platform and version limits
 
-Commands must not:
+The control surface must not:
 
 - pretend a text command itself is the product
 - imply Buddy enhancement succeeded before the official Buddy visibly changes
 
-## 3. Required Commands
+## 3. Required Surface Entries
 
-BuddyHub V1 should include at least these user-facing capabilities:
+BuddyHub V1 should include at least these user-facing entries:
 
-- help
-- settings
-- inspect
+- language
+- color
+- nickname
 - apply
 - restore
-- doctor
 - uninstall
+- quit
 
-The exact invocation layer may evolve, but these functions are the required command surface.
+The exact launch path may evolve, but these functions are the required standalone surface.
 
-## 4. Required Command Behavior
+## 4. Required Behavior
 
-### 4.1 Help
+### 4.1 Language
 
-Must explain:
+Must let the user switch the full TUI language immediately.
 
-- that BuddyHub targets the official bottom-right Buddy
-- that the current phase is visual customization only
-- that runtime states are out of scope for this phase
-- which operations are safe to run
-
-### 4.2 Settings
+### 4.2 Color
 
 Must let the user:
 
 - choose a color preset
-- set or clear a nickname
-- access preview behavior
-- apply or restore
+- preview the draft instantly
+- see whether a color is unavailable
 
-If a setting is unsupported on the current target, settings must say so explicitly.
+If a color is unsupported on the current target, the menu must say so explicitly.
 
-In the current validated public plugin surface, `settings` must behave as a fast menu entry that points the user to Claude Code's native `/config` surface.
+### 4.3 Nickname
 
-That native-menu flow must:
+Must let the user:
 
-- expose BuddyHub plugin options through `manifest.userConfig`
-- let the user choose at most one color toggle
-- let the user provide an optional nickname
-- keep `/buddyhub:settings` itself lightweight and non-blocking
-- direct the user to `/buddyhub:inspect` for effective settings, blockers, and preview details
-- keep element switching hidden in the current public release
-
-### 4.3 Inspect
-
-Must show:
-
-- detected platform
-- detected Claude version
-- detected target path
-- current verified Buddy identity when available
-- whether the requested customization is supported on the current target
-- which official Buddy surfaces share the current name/color source
+- enter a nickname directly
+- clear the nickname
+- preview the draft name immediately
 
 ### 4.4 Apply
 
@@ -110,30 +91,23 @@ Must:
 - verify the restored target is usable
 - state that restore returns both the bottom-right Buddy and the `/buddy` card to the original source
 
-### 4.6 Doctor
-
-Must help diagnose:
-
-- unsupported version
-- path mismatch
-- signature issues
-- failed patch application
-- failed launch verification
-- unsupported element, color, or nickname slots
-- mismatched expectations between the bottom-right Buddy and the `/buddy` card
-
-### 4.7 Uninstall
+### 4.6 Uninstall
 
 Must:
 
-- clean BuddyHub-owned tooling or metadata
-- guide or perform restore if BuddyHub has patched the user's install
+- perform restore automatically when BuddyHub has patched the user's install
+- clean BuddyHub-owned metadata automatically
+- clean old Claude plugin traces automatically
+- schedule package-manager uninstall automatically when BuddyHub was installed through pip/npm/brew
+- avoid asking the user to run a second uninstall command by hand
 
 ## 5. Explicit Non-Goals
 
-This phase does not require command support for:
+This phase does not require support for:
 
 - runtime state reporting
+- plugin slash commands
+- Claude `/config` plugin menus
 - status line toggles
 - hook-driven Buddy activity
 - text Buddy rendering
@@ -142,9 +116,10 @@ This phase does not require command support for:
 
 This spec is satisfied when:
 
-1. The user can open a customization settings flow.
-2. The user can inspect whether their Claude install is patchable.
-3. The user can apply the selected customization through a clear command path.
+1. The user can open a standalone TUI settings flow.
+2. The user can choose language, color, and nickname from that menu.
+3. The user can apply the selected customization through a clear menu path.
 4. The user is clearly told to restart Claude Code after apply.
-5. The user can restore the original install through a clear command path.
-6. Commands never substitute for real official Buddy enhancement.
+5. The user can restore the original install through a clear menu path.
+6. The user can uninstall BuddyHub without manual follow-up shell commands.
+7. The menu never substitutes for real official Buddy enhancement.

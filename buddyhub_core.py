@@ -3,16 +3,19 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 from datetime import datetime, timezone
 import hashlib
+import importlib.metadata
 from pathlib import Path
 from typing import Any
 
-PLUGIN_ROOT = Path(__file__).resolve().parents[1]
+APP_ROOT = Path(__file__).resolve().parent
 CLAUDE_CONFIG_ROOT = Path.home() / ".claude"
 CLAUDE_PROJECTS_ROOT = CLAUDE_CONFIG_ROOT / "projects"
 CLAUDE_VERSIONS_ROOT = Path.home() / ".local" / "share" / "claude" / "versions"
@@ -21,18 +24,24 @@ CLAUDE_JSON_FILE = Path(
     or (Path.home() / ".claude.json")
 )
 DATA_ROOT = Path(
-    os.environ.get("CLAUDE_PLUGIN_DATA_DIR")
-    or os.environ.get("BUDDYHUB_DATA_ROOT")
-    or (Path.home() / ".claude" / "plugins" / "data" / "buddyhub")
+    os.environ.get("BUDDYHUB_DATA_ROOT")
+    or (Path.home() / ".buddyhub")
 )
+LEGACY_PLUGIN_DATA_ROOT = Path.home() / ".claude" / "plugins" / "data" / "buddyhub"
 OWNERSHIP_FILE = DATA_ROOT / "ownership.json"
 NATIVE_PATCH_STATE_FILE = DATA_ROOT / "native-patch.json"
 CUSTOMIZATION_SETTINGS_FILE = DATA_ROOT / "customization-settings.json"
 NATIVE_BACKUP_ROOT = DATA_ROOT / "native-backups"
 NATIVE_WORK_ROOT = DATA_ROOT / "native-work"
 CONFIG_BACKUP_ROOT = DATA_ROOT / "config-backups"
-
-PLUGIN_REF = "buddyhub@buddyhub"
+UNINSTALL_SCRIPT_FILE = DATA_ROOT / "uninstall.sh"
+LEGACY_PLUGIN_TRACE_PATHS = [
+    Path.home() / ".claude" / "plugins" / "cache" / "buddyhub",
+    Path.home() / ".claude" / "plugins" / "marketplaces" / "buddyhub",
+    Path.home() / ".claude" / "plugins" / "data" / "buddyhub",
+    Path.home() / ".claude" / "plugins" / "data" / "buddyhub-buddyhub",
+    Path.home() / ".claude" / "plugins" / "data" / "buddyhub-inline",
+]
 
 ELEMENT_CATALOG: dict[str, dict[str, Any]] = {
     "tophat": {
@@ -85,24 +94,6 @@ LANGUAGE_PRESETS: dict[str, dict[str, str]] = {
     "fr": {"language_id": "fr", "label": "Français"},
     "ru": {"language_id": "ru", "label": "Русский"},
 }
-
-USERCONFIG_ELEMENT_KEYS: dict[str, str] = {
-    "element_tophat": "tophat",
-    "element_coffee": "coffee",
-    "element_book": "book",
-}
-
-USERCONFIG_COLOR_KEYS: dict[str, str] = {
-    "color_green": "green",
-    "color_orange": "orange",
-    "color_blue": "blue",
-    "color_pink": "pink",
-    "color_purple": "purple",
-    "color_red": "red",
-    "color_black": "black",
-}
-
-USERCONFIG_NICKNAME_KEY = "nickname"
 
 COLOR_PATCH_PRESETS: dict[str, dict[str, dict[str, Any]]] = {
     "2.1.92": {
@@ -353,7 +344,20 @@ BASE_SPECIES_PREVIEW_LINES: dict[str, list[str]] = {
 }
 
 def ensure_data_root() -> None:
+    migrate_legacy_data_root()
     DATA_ROOT.mkdir(parents=True, exist_ok=True)
+
+
+def migrate_legacy_data_root() -> bool:
+    if DATA_ROOT == LEGACY_PLUGIN_DATA_ROOT:
+        return False
+    if DATA_ROOT.exists():
+        return False
+    if not LEGACY_PLUGIN_DATA_ROOT.exists():
+        return False
+    DATA_ROOT.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(LEGACY_PLUGIN_DATA_ROOT, DATA_ROOT, dirs_exist_ok=True)
+    return True
 
 
 def now_iso() -> str:
@@ -423,9 +427,129 @@ def parse_semver(name: str) -> tuple[int, int, int] | None:
     return tuple(int(part) for part in parts)  # type: ignore[return-value]
 
 
-def plugin_version() -> str:
-    plugin_meta = read_json(PLUGIN_ROOT / ".claude-plugin" / "plugin.json", {})
-    return str(plugin_meta.get("version", "0.1.0"))
+def app_version() -> str:
+    try:
+        return importlib.metadata.version("buddyhub")
+    except importlib.metadata.PackageNotFoundError:
+        pass
+
+    pyproject = APP_ROOT / "pyproject.toml"
+    if pyproject.exists():
+        try:
+            with pyproject.open("rb") as handle:
+                data = tomllib.load(handle)
+            return str(data.get("project", {}).get("version", "0.1.0"))
+        except (OSError, tomllib.TOMLDecodeError):
+            pass
+
+    package_json = APP_ROOT / "package.json"
+    if package_json.exists():
+        try:
+            return str(read_json(package_json, {}).get("version", "0.1.0"))
+        except OSError:
+            pass
+    return "0.1.0"
+
+
+def install_context() -> dict[str, Any]:
+    module_root = APP_ROOT
+    module_path = str(module_root)
+    source = "unknown"
+    uninstall_commands: list[list[str]] = []
+
+    if module_root.exists() and (module_root / ".git").exists():
+        source = "source_checkout"
+    elif "node_modules" in module_root.parts:
+        source = "npm"
+        uninstall_commands.append(["npm", "uninstall", "-g", "buddyhub"])
+    elif "site-packages" in module_root.parts or "dist-packages" in module_root.parts:
+        source = "pip"
+        uninstall_commands.append([sys.executable, "-m", "pip", "uninstall", "-y", "buddyhub"])
+    elif "Cellar" in module_root.parts or "Homebrew" in module_path:
+        source = "brew"
+        uninstall_commands.append(["brew", "uninstall", "buddyhub"])
+    else:
+        uninstall_commands.extend(
+            [
+                ["brew", "uninstall", "buddyhub"],
+                ["npm", "uninstall", "-g", "buddyhub"],
+                [sys.executable, "-m", "pip", "uninstall", "-y", "buddyhub"],
+            ]
+        )
+
+    return {
+        "source": source,
+        "module_root": str(module_root),
+        "uninstall_commands": uninstall_commands,
+    }
+
+
+def remove_path(path: Path) -> list[str]:
+    removed: list[str] = []
+    if not path.exists():
+        return removed
+    if path.is_dir():
+        shutil.rmtree(path)
+    else:
+        path.unlink()
+    removed.append(str(path))
+    parent = path.parent
+    while parent != parent.parent:
+        try:
+            parent.rmdir()
+        except OSError:
+            break
+        removed.append(str(parent))
+        parent = parent.parent
+    return removed
+
+
+def cleanup_legacy_plugin_traces() -> list[str]:
+    removed: list[str] = []
+    for path in LEGACY_PLUGIN_TRACE_PATHS:
+        removed.extend(remove_path(path))
+    return removed
+
+
+def render_uninstall_script(
+    *,
+    remove_data_root: bool = True,
+) -> str:
+    cleanup_paths = list(LEGACY_PLUGIN_TRACE_PATHS)
+    if remove_data_root:
+        cleanup_paths.append(DATA_ROOT)
+    cleanup_commands = "\n".join(
+        f"rm -rf {shlex.quote(str(path))}" for path in cleanup_paths
+    )
+    uninstall_lines = []
+    for command in install_context()["uninstall_commands"]:
+        uninstall_lines.append(" ".join(shlex.quote(part) for part in command) + " >/dev/null 2>&1 || true")
+    uninstall_body = "\n".join(uninstall_lines)
+    return f"""#!/bin/zsh
+sleep 1
+{cleanup_commands}
+rm -f {shlex.quote(str(UNINSTALL_SCRIPT_FILE))}
+{uninstall_body}
+"""
+
+
+def schedule_self_uninstall(*, remove_data_root: bool = True) -> dict[str, Any]:
+    ensure_data_root()
+    script = render_uninstall_script(remove_data_root=remove_data_root)
+    UNINSTALL_SCRIPT_FILE.write_text(script, encoding="utf-8")
+    UNINSTALL_SCRIPT_FILE.chmod(0o700)
+    process = subprocess.Popen(  # noqa: S603
+        ["/bin/zsh", str(UNINSTALL_SCRIPT_FILE)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    return {
+        "script_path": str(UNINSTALL_SCRIPT_FILE),
+        "pid": process.pid,
+        "install_context": install_context(),
+        "cleanup_paths": [str(path) for path in LEGACY_PLUGIN_TRACE_PATHS] + ([str(DATA_ROOT)] if remove_data_root else []),
+    }
 
 
 def ensure_ownership_manifest() -> dict[str, Any]:
@@ -433,8 +557,8 @@ def ensure_ownership_manifest() -> dict[str, Any]:
     manifest = read_json(OWNERSHIP_FILE, None)
     if manifest is None:
         manifest = {
-            "plugin": "buddyhub",
-            "version": plugin_version(),
+            "app": "buddyhub",
+            "version": app_version(),
             "created_at": now_iso(),
             "data_root": str(DATA_ROOT),
             "owned_files": [
@@ -505,6 +629,7 @@ def sanitize_customization_settings(raw: dict[str, Any] | None) -> dict[str, Any
 
 
 def load_customization_settings() -> dict[str, Any]:
+    ensure_data_root()
     return sanitize_customization_settings(read_json(CUSTOMIZATION_SETTINGS_FILE, {}))
 
 
@@ -548,89 +673,6 @@ def update_customization_settings(
     if clear_nickname:
         settings["nickname"] = None
     return save_customization_settings(settings)
-
-
-def plugin_option_env_name(option_key: str) -> str:
-    normalized = option_key.replace("-", "_").upper()
-    return f"CLAUDE_PLUGIN_OPTION_{normalized}"
-
-
-def parse_plugin_option_bool(option_key: str) -> bool | None:
-    raw = os.environ.get(plugin_option_env_name(option_key))
-    if raw is None:
-        return None
-    value = raw.strip().lower()
-    if value in {"1", "true", "yes", "on"}:
-        return True
-    if value in {"0", "false", "no", "off", ""}:
-        return False
-    return None
-
-
-def read_plugin_option_string(option_key: str) -> str | None:
-    raw = os.environ.get(plugin_option_env_name(option_key))
-    if raw is None:
-        return None
-    return raw
-
-
-def load_userconfig_runtime_overrides() -> dict[str, Any]:
-    selected_elements = [
-        element_id
-        for option_key, element_id in USERCONFIG_ELEMENT_KEYS.items()
-        if parse_plugin_option_bool(option_key) is True
-    ]
-    selected_colors = [
-        color_id
-        for option_key, color_id in USERCONFIG_COLOR_KEYS.items()
-        if parse_plugin_option_bool(option_key) is True
-    ]
-    nickname = normalize_nickname(read_plugin_option_string(USERCONFIG_NICKNAME_KEY))
-    nickname_present = read_plugin_option_string(USERCONFIG_NICKNAME_KEY) is not None
-    return {
-        "source": "manifest.userConfig",
-        "selected_elements": selected_elements,
-        "selected_colors": selected_colors,
-        "nickname": nickname,
-        "nickname_present": nickname_present,
-        "has_any_value": bool(selected_elements or selected_colors or nickname_present),
-    }
-
-
-def merge_customization_settings_with_userconfig(
-    settings: dict[str, Any],
-    runtime_overrides: dict[str, Any] | None = None,
-) -> tuple[dict[str, Any], list[str], list[str]]:
-    overrides = runtime_overrides or load_userconfig_runtime_overrides()
-    merged = dict(settings)
-    blockers: list[str] = []
-    warnings: list[str] = []
-
-    selected_elements = overrides.get("selected_elements") or []
-    selected_colors = overrides.get("selected_colors") or []
-
-    if len(selected_elements) > 1:
-        blockers.append(
-            "Multiple BuddyHub element toggles are enabled in `/config`. Enable exactly one element there."
-        )
-    elif len(selected_elements) == 1:
-        merged["element_id"] = selected_elements[0]
-
-    if len(selected_colors) > 1:
-        blockers.append(
-            "Multiple BuddyHub color toggles are enabled in `/config`. Enable at most one color there."
-        )
-    elif len(selected_colors) == 1:
-        merged["color_id"] = selected_colors[0]
-
-    if overrides.get("nickname_present"):
-        merged["nickname"] = overrides.get("nickname")
-        if overrides.get("nickname") is None:
-            warnings.append(
-                "BuddyHub native Nickname is blank in `/config`, so the official Buddy name will stay unchanged."
-            )
-
-    return sanitize_customization_settings(merged), blockers, warnings
 
 
 def profiles_for_version(version: str | None) -> list[dict[str, Any]]:
@@ -724,11 +766,6 @@ def customization_support(
     identity: dict[str, Any],
     settings: dict[str, Any],
     companion_config: dict[str, Any],
-    *,
-    saved_settings: dict[str, Any] | None = None,
-    runtime_overrides: dict[str, Any] | None = None,
-    runtime_blockers: list[str] | None = None,
-    runtime_warnings: list[str] | None = None,
 ) -> dict[str, Any]:
     profile, profile_reason = select_patch_profile(detection, identity, settings)
     selected_element = ELEMENT_CATALOG.get(settings["element_id"]) or {
@@ -794,8 +831,8 @@ def customization_support(
     )
 
     can_apply = profile is not None
-    blockers: list[str] = list(runtime_blockers or [])
-    warnings: list[str] = list(runtime_warnings or [])
+    blockers: list[str] = []
+    warnings: list[str] = []
     effective_settings = dict(settings)
     if profile is None:
         blockers.append(profile_reason)
@@ -811,9 +848,8 @@ def customization_support(
 
     return {
         "settings": settings,
-        "saved_settings": saved_settings or settings,
+        "saved_settings": settings,
         "effective_settings": effective_settings,
-        "runtime_overrides": runtime_overrides or {},
         "profile": profile,
         "profile_reason": profile_reason,
         "element_options": element_options,
@@ -941,6 +977,7 @@ def default_native_patch_state() -> dict[str, Any]:
 
 
 def load_native_patch_state() -> dict[str, Any]:
+    ensure_data_root()
     state = default_native_patch_state()
     state.update(read_json(NATIVE_PATCH_STATE_FILE, {}))
     return state
@@ -1427,21 +1464,13 @@ def inspect_native_patch(*, create_manifest: bool = False) -> dict[str, Any]:
     identity = current_identity_from_projects()
     companion_config = read_companion_config()
     saved_settings = load_customization_settings()
-    runtime_overrides = load_userconfig_runtime_overrides()
-    settings, runtime_blockers, runtime_warnings = merge_customization_settings_with_userconfig(
-        saved_settings,
-        runtime_overrides,
-    )
+    settings = dict(saved_settings)
     patch_state = load_native_patch_state()
     customization = customization_support(
         detection,
         identity,
         settings,
         companion_config,
-        saved_settings=saved_settings,
-        runtime_overrides=runtime_overrides,
-        runtime_blockers=runtime_blockers,
-        runtime_warnings=runtime_warnings,
     )
     selected_profile = customization.get("profile")
 
@@ -1506,7 +1535,6 @@ def inspect_native_patch(*, create_manifest: bool = False) -> dict[str, Any]:
         "companion_config": companion_config,
         "settings": saved_settings,
         "effective_settings": settings,
-        "runtime_overrides": runtime_overrides,
         "customization": customization,
         "effective_profile": effective_profile,
         "backup": backup,

@@ -1,1 +1,0 @@
-"""BuddyHub script support package."""

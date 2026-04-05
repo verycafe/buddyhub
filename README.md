@@ -123,6 +123,7 @@ Current top-level menu:
 - `Nickname`
 - `Apply`
 - `Restore`
+- `Uninstall`
 - `Quit`
 
 Current scope note:
@@ -140,6 +141,12 @@ After `Apply` or `Restore`, the TUI shows a dedicated result card instead of rel
 The result card also summarizes which visible Buddy properties changed, such as:
 - `Display name`
 - `Color`
+
+`Uninstall` is fully automatic:
+- it restores the Buddy first if BuddyHub has an active patch
+- removes old Claude plugin traces such as `~/.claude/plugins/.../buddyhub*`
+- removes BuddyHub standalone data under `~/.buddyhub`
+- schedules package-manager uninstall in the background when BuddyHub was installed through `pip`, `npm`, or `brew`
 
 For a quick non-interactive check:
 

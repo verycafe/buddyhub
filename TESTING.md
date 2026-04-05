@@ -19,9 +19,8 @@ The purpose is to verify that:
 
 This phase does not test:
 
+- legacy plugin settings surfaces
 - plugin slash commands
-- `/config`
-- SessionStart hooks
 - runtime Buddy state tracking
 
 ## 2. Current Validated Example
@@ -65,6 +64,7 @@ The required order is:
 9. verify `/buddy` matches name and color
 10. restore the original state
 11. verify the standalone TUI result card appears for apply and restore
+12. verify `Uninstall` restores, removes old plugin traces, and exits automatically
 
 ## 5. Installed-State Detection Test
 
@@ -95,6 +95,7 @@ Verify:
   - `Nickname`
   - `Apply`
   - `Restore`
+  - `Uninstall`
   - `Quit`
 - selecting a language immediately changes the menu labels
 - the preview section titles also switch language
@@ -193,30 +194,42 @@ Verify:
 - the original binary patch state is restored
 - the `/buddy` companion card returns to the original name/color source as well
 
-## 11. Failure Tests
+## 11. Uninstall Test
 
-### 11.1 Unsupported color
+From the standalone TUI, choose `Uninstall`.
+
+Verify:
+
+- BuddyHub restores the official Buddy first when a patch is present
+- old Claude plugin traces under `~/.claude/plugins/.../buddyhub*` are removed automatically
+- the standalone BuddyHub data root is removed automatically
+- BuddyHub exits on its own without asking the user to run a separate uninstall command
+- if BuddyHub was installed through a package manager, the background uninstall job is scheduled automatically
+
+## 12. Failure Tests
+
+### 12.1 Unsupported color
 
 Verify:
 
 - selecting `white` does not silently become active
 - BuddyHub reports the color as unavailable
 
-### 11.2 Apply on already-matching state
+### 12.2 Apply on already-matching state
 
 Verify:
 
 - if the current installed Buddy already matches the saved draft, apply succeeds cleanly
 - BuddyHub does not require a stale local patch record to recognize the installed state
 
-### 11.3 Restore when nothing is patched
+### 12.3 Restore when nothing is patched
 
 Verify:
 
 - BuddyHub fails safely or reports a clean no-op
 - no unrelated files are modified
 
-### 11.4 Nickname restore
+### 12.4 Nickname restore
 
 Verify:
 
@@ -228,8 +241,6 @@ Do not treat these as blockers for this phase:
 
 - element switching in the standalone menu
 - adding a default element when none is installed
-- plugin slash-command settings
-- `/config`
 - runtime state tracking
 - status line
 
