@@ -1,0 +1,21 @@
+{
+  "name": "buddyhub",
+  "version": "0.1.26",
+  "description": "Standalone TUI configurator for the official Claude Code Buddy.",
+  "license": "AGPL-3.0-only",
+  "bin": {
+    "buddyhub": "./buddyhub"
+  },
+  "files": [
+    "buddyhub",
+    "buddyhub_tui.py",
+    "plugins/__init__.py",
+    "plugins/buddyhub/__init__.py",
+    "plugins/buddyhub/.claude-plugin/plugin.json",
+    "plugins/buddyhub/scripts/__init__.py",
+    "plugins/buddyhub/scripts/buddyhublib.py"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

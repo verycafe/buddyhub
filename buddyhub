@@ -1,5 +1,15 @@
-#!/bin/zsh
-set -euo pipefail
+#!/usr/bin/env python3
+from __future__ import annotations
 
-SCRIPT_DIR="${0:A:h}"
-exec python3 "${SCRIPT_DIR}/buddyhub_tui.py" "$@"
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from buddyhub_tui import main
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

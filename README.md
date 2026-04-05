@@ -68,6 +68,43 @@ Run the standalone BuddyHub menu with:
 /Users/tvwoo/Projects/buddyhub/buddyhub
 ```
 
+## Install Without a Publisher Account
+
+BuddyHub can now be installed directly from GitHub without publishing to PyPI, npm, or Homebrew first.
+
+### pip
+
+Install from GitHub:
+
+```bash
+python3 -m pip install "git+https://github.com/verycafe/buddyhub.git"
+```
+
+Then run:
+
+```bash
+buddyhub
+```
+
+### npm
+
+Install from GitHub:
+
+```bash
+npm install -g github:verycafe/buddyhub
+```
+
+Then run:
+
+```bash
+buddyhub
+```
+
+### brew
+
+Homebrew packaging is not published yet.
+The currently verified no-account install paths are `pip` and `npm`.
+
 Current top-level menu:
 - `Language`
 - `Color`

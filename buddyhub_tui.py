@@ -5,15 +5,9 @@ import argparse
 import curses
 import json
 import locale
-import sys
-from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parent
-PLUGIN_SCRIPTS = ROOT / "plugins" / "buddyhub" / "scripts"
-sys.path.insert(0, str(PLUGIN_SCRIPTS))
-
-from buddyhublib import (  # noqa: E402
+from plugins.buddyhub.scripts.buddyhublib import (
     COLOR_PRESETS,
     LANGUAGE_PRESETS,
     apply_installed_patch,

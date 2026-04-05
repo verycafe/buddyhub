@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "buddyhub"
+version = "0.1.26"
+description = "Standalone TUI configurator for the official Claude Code Buddy."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "AGPL-3.0-only" }
+authors = [
+  { name = "verycafe" }
+]
+keywords = ["claude", "claude-code", "buddy", "tui"]
+classifiers = [
+  "Environment :: Console :: Curses",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: GNU Affero General Public License v3",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Software Development :: User Interfaces",
+]
+dependencies = []
+
+[project.scripts]
+buddyhub = "buddyhub_tui:main"
+
+[tool.setuptools]
+py-modules = ["buddyhub_tui"]
+
+[tool.setuptools.packages.find]
+include = ["plugins", "plugins.*"]
+
+[tool.setuptools.package-data]
+"plugins.buddyhub" = [".claude-plugin/plugin.json"]

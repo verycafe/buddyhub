@@ -70,6 +70,43 @@ BuddyHub 当前不再把这些当作主线：
 /Users/tvwoo/Projects/buddyhub/buddyhub
 ```
 
+## 无需发布账号的安装方式
+
+BuddyHub 现在可以直接从 GitHub 安装，不需要先发布到 PyPI、npm 或 Homebrew。
+
+### pip
+
+直接从 GitHub 安装：
+
+```bash
+python3 -m pip install "git+https://github.com/verycafe/buddyhub.git"
+```
+
+安装完成后，直接运行：
+
+```bash
+buddyhub
+```
+
+### npm
+
+直接从 GitHub 安装：
+
+```bash
+npm install -g github:verycafe/buddyhub
+```
+
+安装完成后，直接运行：
+
+```bash
+buddyhub
+```
+
+### brew
+
+Homebrew 方式目前还没有正式发布。
+当前已验证、且不需要账号的安装方式是 `pip` 和 `npm`。
+
 当前一级菜单：
 - `Language`
 - `Color`
