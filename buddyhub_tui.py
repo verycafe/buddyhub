@@ -1129,7 +1129,7 @@ class BuddyHubTUI:
         preview_lines: list[str],
         attr: int,
     ) -> None:
-        card_height = 11
+        card_height = max(11, 8 + len(preview_lines))
         self.safe_box(stdscr, start_y, start_x, width, card_height)
         self.safe_addstr(stdscr, start_y + 1, start_x + 2, title[: max(0, width - 4)], curses.A_BOLD)
         self.safe_addstr(stdscr, start_y + 2, start_x + 2, name_line[: max(0, width - 4)])
@@ -1137,7 +1137,7 @@ class BuddyHubTUI:
         self.safe_addstr(stdscr, start_y + 4, start_x + 2, color_line[: max(0, width - 4)], attr)
         self.safe_hline(stdscr, start_y + 5, start_x + 1, max(0, width - 2))
         row = start_y + 6
-        for line in preview_lines[:3]:
+        for line in preview_lines:
             self.safe_addstr(stdscr, row, start_x + 2, line[: max(0, width - 4)], attr)
             row += 1
         self.safe_addstr(stdscr, start_y + card_height - 2, start_x + 2, footer_line[: max(0, width - 4)], curses.A_DIM)
@@ -1159,13 +1159,8 @@ class BuddyHubTUI:
             selected = self.selection["main"]
             for index, item_id in enumerate(TOP_LEVEL_MENU):
                 label = self.top_level_label(item_id)
-                value = self.main_menu_value(item_id)
-                if item_id == "color" and self.color_changed():
-                    value = f"{value} [{self.tr('draft')}]"
-                elif item_id == "nickname" and self.nickname_changed():
-                    value = f"{value} [{self.tr('draft')}]"
                 marker = "›" if index == selected else " "
-                text = f"{marker} {label}: {value}" if value else f"{marker} {label}"
+                text = f"{marker} {label}"
                 attr = 0
                 if item_id in {"color", "nickname"}:
                     if (item_id == "color" and self.color_changed()) or (item_id == "nickname" and self.nickname_changed()):
@@ -1175,21 +1170,6 @@ class BuddyHubTUI:
                 elif item_id == "restore" and not self.has_restore_target():
                     attr = curses.A_DIM
                 lines.append((text, index == selected, attr))
-            lines.append(("", False, 0))
-            lines.append(
-                (
-                    f"{self.tr('status_pending_changes')}: {self.tr('status_yes') if self.has_pending_changes() else self.tr('status_no')}",
-                    False,
-                    0,
-                )
-            )
-            lines.append(
-                (
-                    f"{self.tr('status_restore')}: {self.tr('status_yes') if self.has_restore_target() else self.tr('status_no')}",
-                    False,
-                    0,
-                )
-            )
         elif self.screen == "language":
             selected = self.selection["language"]
             for index, language_id in enumerate(LANGUAGE_ORDER):
@@ -1260,6 +1240,7 @@ class BuddyHubTUI:
     def render_preview(self, stdscr: Any, start_y: int, start_x: int, width: int, height: int) -> None:
         customization = self.inspection.get("customization") or {}
         current_profile = self.inspection.get("current_profile") or {}
+        companion = self.inspection.get("companion_config") or {}
         preview_visual = self.preview_draft_visual()
         draft_element = preview_visual.get("element_id") or self.tr("value_none")
         current_element = current_profile.get("element_id") or self.current_visual.get("element_id") or self.tr("value_none")
@@ -1286,42 +1267,38 @@ class BuddyHubTUI:
             self.safe_addstr(stdscr, y, start_x + 2, line[: max(0, width - 4)])
             y += 1
 
-        box_width = max(24, min(width, 30))
-        box_height = 11
-
-        installed_color_line = f"{self.color_chip(self.current_visual.get('color_id'))} {self.color_option_label(self.current_visual['color_id']) if self.current_visual.get('color_id') else self.tr('default_color')}"
-        current_attr = self.color_attr(self.current_visual.get("color_id"))
-        draft_color_line = f"{self.color_chip(preview_visual.get('color_id'))} {self.color_option_label(preview_visual['color_id']) if preview_visual.get('color_id') else self.tr('default_color')}"
-        draft_attr = self.color_attr(preview_visual.get("color_id"))
-        y = start_y + summary_height + 1
-        self.render_preview_card(
-            stdscr,
-            y,
-            start_x,
-            box_width,
-            f"{self.tr('installed_preview')} [{self.tr('current')}]",
-            self.current_visual.get("name") or self.tr("value_unknown"),
-            f"{self.tr('buddy_identity')}: {self.current_visual.get('species') or self.tr('value_unknown')}",
-            installed_color_line,
-            f"{self.tr('installed_element')}: {current_element}",
-            list(self.current_visual.get("preview_lines") or []),
-            current_attr,
+        preview_lines = list(preview_visual.get("preview_lines") or [])
+        preview_attr = self.color_attr(preview_visual.get("color_id"))
+        preview_color = (
+            self.color_option_label(preview_visual["color_id"]).upper()
+            if preview_visual.get("color_id")
+            else self.tr("default_color").upper()
         )
-
-        y += box_height + 1
-        self.render_preview_card(
-            stdscr,
-            y,
-            start_x,
-            box_width,
-            f"{self.tr('draft_preview')} [{self.tr('draft') if self.has_pending_changes(preview_visual) else self.tr('current')}]",
-            preview_visual.get("name") or self.tr("value_unknown"),
-            f"{self.tr('changes_label')}: {', '.join(self.draft_change_labels(preview_visual)) or self.tr('changes_none')}",
-            draft_color_line,
-            f"{self.tr('selected_nickname')}: {preview_visual.get('name') if preview_visual.get('name') != self.current_visual.get('name') else self.tr('value_none')}",
-            list(preview_visual.get("preview_lines") or []),
-            draft_attr,
-        )
+        preview_species = str(preview_visual.get("species") or self.tr("value_unknown")).upper()
+        preview_name = str(preview_visual.get("name") or self.tr("value_unknown"))
+        personality = str(companion.get("personality") or "").strip()
+        panel_y = start_y + summary_height + 1
+        panel_width = width
+        panel_height = max(16, 10 + len(preview_lines) + (2 if personality else 0))
+        self.safe_box(stdscr, panel_y, start_x, panel_width, panel_height)
+        title = f"{self.tr('preview')} [{self.tr('draft') if self.has_pending_changes(preview_visual) else self.tr('current')}]"
+        self.safe_addstr(stdscr, panel_y + 1, start_x + 2, title[: max(0, panel_width - 4)], curses.A_BOLD)
+        self.safe_addstr(stdscr, panel_y + 2, start_x + 2, preview_color[: max(0, panel_width - 4)], preview_attr | curses.A_BOLD)
+        species_x = start_x + max(2, panel_width - 2 - len(preview_species))
+        self.safe_addstr(stdscr, panel_y + 2, species_x, preview_species[: max(0, panel_width - 4)], preview_attr | curses.A_BOLD)
+        self.safe_hline(stdscr, panel_y + 3, start_x + 1, max(0, panel_width - 2))
+        row = panel_y + 4
+        for line in preview_lines:
+            self.safe_addstr(stdscr, row, start_x + 4, line[: max(0, panel_width - 8)], preview_attr)
+            row += 1
+        row += 1
+        self.safe_addstr(stdscr, row, start_x + 2, preview_name[: max(0, panel_width - 4)], curses.A_BOLD)
+        row += 2
+        if personality:
+            quoted = f"\"{personality}\""
+            self.safe_addstr(stdscr, row, start_x + 2, quoted[: max(0, panel_width - 4)], curses.A_DIM)
+            row += 2
+        self.safe_addstr(stdscr, panel_y + panel_height - 2, start_x + 2, f"{self.tr('installed_element')}: {current_element}"[: max(0, panel_width - 4)], curses.A_DIM)
 
     def render_result(self, stdscr: Any, height: int, width: int) -> None:
         card = self.result_card or {}
