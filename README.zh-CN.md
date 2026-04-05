@@ -104,8 +104,18 @@ buddyhub
 
 ### brew
 
-Homebrew 方式目前还没有正式发布。
-当前已验证、且不需要账号的安装方式是 `pip` 和 `npm`。
+先把仓库作为 tap 接入，再安装：
+
+```bash
+brew tap verycafe/buddyhub https://github.com/verycafe/buddyhub
+brew install verycafe/buddyhub/buddyhub
+```
+
+安装完成后，直接运行：
+
+```bash
+buddyhub
+```
 
 当前一级菜单：
 - `Language`

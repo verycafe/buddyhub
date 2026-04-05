@@ -102,8 +102,18 @@ buddyhub
 
 ### brew
 
-Homebrew packaging is not published yet.
-The currently verified no-account install paths are `pip` and `npm`.
+Tap the repository, then install:
+
+```bash
+brew tap verycafe/buddyhub https://github.com/verycafe/buddyhub
+brew install verycafe/buddyhub/buddyhub
+```
+
+Then run:
+
+```bash
+buddyhub
+```
 
 Current top-level menu:
 - `Language`
