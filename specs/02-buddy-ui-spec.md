@@ -36,7 +36,7 @@ V1 may enhance:
 - additive top-row elements such as hats, coffee, books, or similar accessories
 - additive face or side embellishments
 - verified native color changes
-- verified nickname display near the official Buddy label
+- verified displayed-name changes for the official Buddy label
 
 V1 should prefer enhancements that feel like added accessories rather than species replacement.
 
@@ -64,13 +64,15 @@ Its job is to let the user:
 - apply changes
 - restore the original visual
 
-For the current public Claude Code plugin surface, this settings UI is expected to be a guided configuration flow.
+For the current public Claude Code plugin surface, this settings UI is currently a command-driven configuration flow.
 
 It must not assume the public plugin config dialog already supports:
 
 - dropdown-style element choices
 - native color swatches
 - live official Buddy preview inside the dialog
+
+It must not present a text flow as if it were a native Claude Code options dialog.
 
 ## 7. Preview Rules
 

@@ -76,6 +76,7 @@ That guided flow must:
 - present explicit element and color choices
 - save the selected values through BuddyHub commands
 - show an honest preview after each change
+- state explicitly when nickname is supported through Claude runtime config and when color remains unavailable
 
 ### 4.3 Inspect
 
@@ -93,6 +94,7 @@ Must:
 
 - create or confirm backup
 - apply the current selected native visual customization
+- apply the saved nickname override only when the Claude runtime config path is verified
 - perform verification
 - report success only if the target patch was actually written
 - tell the user to restart Claude Code
@@ -102,6 +104,7 @@ Must:
 Must:
 
 - restore the original binary from backup
+- restore the original displayed Buddy name from config backup when nickname override was applied
 - verify the restored target is usable
 
 ### 4.6 Doctor

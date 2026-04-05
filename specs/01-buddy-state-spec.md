@@ -90,6 +90,7 @@ Local binary symbols already found include:
 - `YS7`
 - `yj5`
 - `zo_()`
+- `xnH`
 
 These are treated as native visual slots, not public APIs.
 
@@ -150,14 +151,16 @@ The initial preset list is:
 
 A preset may be offered only when the current patch target has a validated color slot for it.
 
+On the current validated target, color presets remain unavailable until a real native color patch point is verified.
+
 ## 10. Nickname Model
 
 Nickname behavior must follow all of the following:
 
 1. The real Buddy `name` remains the source-of-truth identity.
-2. `nickname` is a user-defined additive display value.
-3. If no verified native label patch point exists on the current version, nickname display must be unavailable or experimental.
-4. BuddyHub must not claim the nickname is active on the official Buddy unless the native display patch is verified.
+2. On the current validated macOS target, BuddyHub may apply a reversible displayed-name override through `~/.claude.json` `companion.name`.
+3. Any nickname apply path must create a backup and restore the original name on `restore`.
+4. BuddyHub must not claim nickname support on other targets until the same runtime config path is verified there.
 
 ## 11. Patch Rules
 
@@ -204,4 +207,4 @@ This spec is satisfied when:
 4. BuddyHub does not depend on runtime state logic.
 5. At least one additive element profile is verified on the official Buddy.
 6. Color presets are gated by real validated patch points.
-7. Nickname display is either verified or explicitly unavailable.
+7. Nickname display is verified on the current macOS target through Claude runtime config backup/edit/restore.

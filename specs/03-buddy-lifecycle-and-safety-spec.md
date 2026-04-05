@@ -67,6 +67,8 @@ Unsupported settings must not be silently forced into the patch.
 
 Before modifying any system Claude binary, BuddyHub must create or confirm a backup of the original target file.
 
+Before modifying the displayed Buddy name through Claude runtime config, BuddyHub must create or confirm a backup of that config file.
+
 The backup record must be sufficient to answer:
 
 - which file was backed up
@@ -121,6 +123,7 @@ This guidance must be treated as required product behavior, not an optional note
 Restore must:
 
 - replace the patched binary with the saved original
+- restore the saved Claude runtime config if BuddyHub changed the displayed Buddy name
 - preserve user data outside the patched target
 - leave Claude Code in a launchable state
 
@@ -161,4 +164,5 @@ This spec is satisfied when:
 5. BuddyHub can verify that the patch landed in the target.
 6. BuddyHub clearly prompts for restart after apply.
 7. BuddyHub can restore the original binary safely.
-8. Failure paths leave Claude Code usable.
+8. BuddyHub can restore the original displayed Buddy name safely when nickname override was applied.
+9. Failure paths leave Claude Code usable.
