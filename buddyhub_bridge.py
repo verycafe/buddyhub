@@ -5,49 +5,22 @@ import argparse
 import json
 from typing import Any
 
-from buddyhub_core import COLOR_PRESETS, LANGUAGE_PRESETS
-from buddyhub_tui import BuddyHubTUI, LANGUAGE_ORDER, TOP_LEVEL_MENU
+from buddyhub_core import (
+    LANGUAGE_ORDER,
+    bridge_apply,
+    bridge_restore,
+    bridge_set_color,
+    bridge_set_language,
+    bridge_set_nickname,
+    bridge_state,
+    bridge_ui_model,
+)
 
 
-def serialize_state(app: BuddyHubTUI) -> dict[str, Any]:
-    return {
-        "settings": app.settings,
-        "current_visual": app.current_visual,
-        "draft_visual": app.draft_visual,
-        "screen": app.screen,
-        "needs_setup": app.needs_setup(),
-        "message": app.message,
-        "result_card": app.result_card,
-        "exit_notice": app.exit_notice,
-    }
-
-
-def ui_model() -> dict[str, Any]:
-    return {
-        "languages": [
-            {
-                "language_id": language_id,
-                "label": LANGUAGE_PRESETS[language_id]["label"],
-            }
-            for language_id in LANGUAGE_ORDER
-        ],
-        "colors": [
-            {
-                "color_id": color_id,
-                "label": COLOR_PRESETS[color_id]["label"],
-                "hex": COLOR_PRESETS[color_id]["hex"],
-            }
-            for color_id in ("green", "orange", "blue", "pink", "purple", "red", "black", "white")
-            if color_id in COLOR_PRESETS
-        ],
-        "top_level_menu": list(TOP_LEVEL_MENU),
-    }
-
-
-def ok_payload(*, app: BuddyHubTUI | None = None, result: dict[str, Any] | None = None) -> dict[str, Any]:
+def ok_payload(*, state: dict[str, Any] | None = None, result: dict[str, Any] | None = None) -> dict[str, Any]:
     payload: dict[str, Any] = {"ok": True}
-    if app is not None:
-        payload["state"] = serialize_state(app)
+    if state is not None:
+        payload["state"] = state
     if result is not None:
         payload["result"] = result
     return payload
@@ -55,42 +28,40 @@ def ok_payload(*, app: BuddyHubTUI | None = None, result: dict[str, Any] | None 
 
 def run_action(args: argparse.Namespace) -> dict[str, Any]:
     if args.command == "dump-ui-model":
-        return {"ok": True, "ui": ui_model()}
-
-    app = BuddyHubTUI()
+        return {"ok": True, "ui": bridge_ui_model()}
 
     if args.command == "dump-state":
-        return ok_payload(app=app)
+        return ok_payload(state=bridge_state())
 
     if args.command == "dump-prototype":
-        return {"ok": True, "state": serialize_state(app), "ui": ui_model()}
+        return {"ok": True, "state": bridge_state(), "ui": bridge_ui_model()}
 
     if args.command == "set-language":
-        app.save_language(args.language_id)
-        return ok_payload(app=app, result={"action": "set-language", "language_id": args.language_id})
+        payload = bridge_set_language(args.language_id)
+        return ok_payload(state=payload["state"], result=payload["result"])
 
     if args.command == "set-color":
         if args.color_id == "default":
-            app.save_color(None)
-            return ok_payload(app=app, result={"action": "set-color", "color_id": None})
-        app.save_color(args.color_id)
-        return ok_payload(app=app, result={"action": "set-color", "color_id": args.color_id})
+            payload = bridge_set_color(None)
+        else:
+            payload = bridge_set_color(args.color_id)
+        return ok_payload(state=payload["state"], result=payload["result"])
 
     if args.command == "set-nickname":
-        app.save_nickname(args.nickname)
-        return ok_payload(app=app, result={"action": "set-nickname", "nickname": args.nickname})
+        payload = bridge_set_nickname(args.nickname)
+        return ok_payload(state=payload["state"], result=payload["result"])
 
     if args.command == "clear-nickname":
-        app.clear_nickname()
-        return ok_payload(app=app, result={"action": "clear-nickname"})
+        payload = bridge_set_nickname(None)
+        return ok_payload(state=payload["state"], result={"action": "clear-nickname"})
 
     if args.command == "apply":
-        app.do_apply()
-        return ok_payload(app=app, result={"action": "apply", "result_card": app.result_card})
+        payload = bridge_apply()
+        return ok_payload(state=payload["state"], result=payload["result"])
 
     if args.command == "restore":
-        app.do_restore()
-        return ok_payload(app=app, result={"action": "restore", "result_card": app.result_card})
+        payload = bridge_restore()
+        return ok_payload(state=payload["state"], result=payload["result"])
 
     raise RuntimeError(f"Unknown command: {args.command}")
 

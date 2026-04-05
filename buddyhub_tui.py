@@ -13,6 +13,9 @@ from typing import Any
 from buddyhub_core import (
     COLOR_PRESETS,
     LANGUAGE_PRESETS,
+    LANGUAGE_ORDER,
+    TOP_LEVEL_MENU,
+    VISIBLE_ELEMENT_CONTROLS,
     apply_installed_patch,
     cleanup_legacy_plugin_traces,
     inspect_native_patch,
@@ -611,9 +614,6 @@ for _language_id, _pack in LANGUAGE_PACKS.items():
     for _key, _value in LANGUAGE_PACKS["en"].items():
         _pack.setdefault(_key, _value)
 
-LANGUAGE_ORDER = ["zh_cn", "en", "ja", "ko", "de", "fr", "ru"]
-TOP_LEVEL_MENU = ["language", "color", "nickname", "apply", "restore", "uninstall", "quit"]
-VISIBLE_ELEMENT_CONTROLS = False
 SETUP_MENU = ["binary", "config", "retry", "continue", "quit"]
 ENTER_KEYS = (curses.KEY_ENTER, 10, 13, "\n", "\r")
 ESC_KEYS = (27, "\x1b")

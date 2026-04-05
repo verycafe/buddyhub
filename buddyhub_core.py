@@ -96,6 +96,11 @@ LANGUAGE_PRESETS: dict[str, dict[str, str]] = {
     "ru": {"language_id": "ru", "label": "Русский"},
 }
 
+LANGUAGE_ORDER = ["zh_cn", "en", "ja", "ko", "de", "fr", "ru"]
+TOP_LEVEL_MENU = ["language", "color", "nickname", "apply", "restore", "uninstall", "quit"]
+VISIBLE_ELEMENT_CONTROLS = False
+PUBLIC_COLOR_ORDER = ["green", "orange", "blue", "pink", "purple", "red", "black", "white"]
+
 COLOR_PATCH_PRESETS: dict[str, dict[str, dict[str, Any]]] = {
     "2.1.92": {
         "green": {
@@ -1538,6 +1543,205 @@ def current_visual_state(
     }
 
 
+def bridge_result_card(
+    *,
+    title_key: str,
+    status: str,
+    detail: str,
+    next_step: str | None = None,
+    summary_lines: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "title_key": title_key,
+        "status": status,
+        "detail": detail,
+        "next_step": next_step,
+        "summary_lines": summary_lines or [],
+    }
+
+
+def summarize_visual_changes(
+    before_visual: dict[str, Any],
+    after_visual: dict[str, Any],
+) -> list[str]:
+    lines: list[str] = []
+    before_name = before_visual.get("name") or "unknown"
+    after_name = after_visual.get("name") or "unknown"
+    if before_name != after_name:
+        lines.append(f"Display name: {before_name} -> {after_name}")
+
+    before_color = COLOR_PRESETS.get(before_visual.get("color_id") or "", {}).get("label", "Default")
+    after_color = COLOR_PRESETS.get(after_visual.get("color_id") or "", {}).get("label", "Default")
+    if before_color != after_color:
+        lines.append(f"Color: {before_color} -> {after_color}")
+    return lines
+
+
+def effective_public_settings(
+    saved_settings: dict[str, Any],
+    current_visual: dict[str, Any],
+) -> dict[str, Any]:
+    settings = sanitize_customization_settings(saved_settings)
+    if not VISIBLE_ELEMENT_CONTROLS:
+        settings["element_id"] = current_visual.get("element_id")
+    return sanitize_customization_settings(settings)
+
+
+def build_public_draft_visual(
+    inspection: dict[str, Any],
+    settings: dict[str, Any],
+    *,
+    preview_color_id: str | None = None,
+    preview_nickname: str | None = None,
+) -> dict[str, Any]:
+    current_visual = inspection.get("current_visual") or {}
+    companion = inspection.get("companion_config") or {}
+    customization = inspection.get("customization") or {}
+
+    if VISIBLE_ELEMENT_CONTROLS:
+        preview_lines = preview_lines_for_customization(customization) or current_visual.get("preview_lines")
+        element_id = settings.get("element_id")
+    else:
+        preview_lines = current_visual.get("preview_lines")
+        element_id = current_visual.get("element_id") or settings.get("element_id")
+
+    return {
+        "name": preview_nickname if preview_nickname is not None else (settings.get("nickname") or companion.get("name") or current_visual.get("name")),
+        "species": current_visual.get("species"),
+        "element_id": element_id,
+        "color_id": preview_color_id if preview_color_id is not None else (settings.get("color_id") or current_visual.get("color_id")),
+        "preview_lines": preview_lines,
+    }
+
+
+def bridge_ui_model(*, inspection: dict[str, Any] | None = None) -> dict[str, Any]:
+    inspection = inspection or inspect_native_patch()
+    color_options = {
+        item["color_id"]: item
+        for item in (inspection.get("customization") or {}).get("color_options", [])
+    }
+    return {
+        "languages": [
+            {
+                "language_id": language_id,
+                "label": LANGUAGE_PRESETS[language_id]["label"],
+            }
+            for language_id in LANGUAGE_ORDER
+        ],
+        "colors": [
+            {
+                "color_id": color_id,
+                "label": COLOR_PRESETS[color_id]["label"],
+                "hex": COLOR_PRESETS[color_id]["hex"],
+                "available": bool(color_options.get(color_id, {}).get("available", False)),
+                "reason": color_options.get(color_id, {}).get("reason"),
+            }
+            for color_id in PUBLIC_COLOR_ORDER
+            if color_id in COLOR_PRESETS
+        ],
+        "top_level_menu": list(TOP_LEVEL_MENU),
+    }
+
+
+def bridge_state(
+    *,
+    inspection: dict[str, Any] | None = None,
+    settings: dict[str, Any] | None = None,
+    result_card: dict[str, Any] | None = None,
+    message: str = "",
+    exit_notice: str | None = None,
+) -> dict[str, Any]:
+    inspection = inspection or inspect_native_patch()
+    current_visual = inspection.get("current_visual") or {}
+    saved_settings = settings or inspection.get("settings") or load_customization_settings()
+    effective_settings = effective_public_settings(saved_settings, current_visual)
+    draft_visual = build_public_draft_visual(inspection, effective_settings)
+    detection = inspection.get("detection") or {}
+    companion = inspection.get("companion_config") or {}
+    return {
+        "settings": effective_settings,
+        "current_visual": current_visual,
+        "draft_visual": draft_visual,
+        "screen": "setup" if (not detection.get("target_detected") or not companion.get("exists")) else "main",
+        "needs_setup": (not detection.get("target_detected")) or (not companion.get("exists")),
+        "message": message,
+        "result_card": result_card,
+        "exit_notice": exit_notice,
+    }
+
+
+def save_public_settings(
+    *,
+    inspection: dict[str, Any] | None = None,
+    updater: dict[str, Any] | None = None,
+    clear_color: bool = False,
+    clear_nickname: bool = False,
+) -> dict[str, Any]:
+    inspection = inspection or inspect_native_patch()
+    current_visual = inspection.get("current_visual") or {}
+    settings = effective_public_settings(inspection.get("settings") or load_customization_settings(), current_visual)
+    if updater:
+        settings.update(updater)
+    if clear_color:
+        settings["color_id"] = None
+    if clear_nickname:
+        settings["nickname"] = None
+    return save_customization_settings(settings)
+
+
+def bridge_set_language(language_id: str) -> dict[str, Any]:
+    if language_id not in LANGUAGE_PRESETS:
+        raise RuntimeError(f"Unknown language_id: {language_id}")
+    inspection = inspect_native_patch()
+    settings = save_public_settings(inspection=inspection, updater={"language_id": language_id})
+    refreshed = inspect_native_patch()
+    return {
+        "result": {"action": "set-language", "language_id": language_id},
+        "state": bridge_state(inspection=refreshed, settings=settings, message="Language saved."),
+    }
+
+
+def bridge_set_color(color_id: str | None) -> dict[str, Any]:
+    inspection = inspect_native_patch()
+    if color_id is not None:
+        if color_id not in COLOR_PRESETS:
+            raise RuntimeError(f"Unknown color_id: {color_id}")
+        color_options = {
+            item["color_id"]: item
+            for item in (inspection.get("customization") or {}).get("color_options", [])
+        }
+        option = color_options.get(color_id)
+        if option is None or not option.get("available"):
+            reason = option.get("reason") if option else "Selected color is not available."
+            raise RuntimeError(str(reason))
+        settings = save_public_settings(inspection=inspection, updater={"color_id": color_id})
+        message = "Color saved."
+    else:
+        settings = save_public_settings(inspection=inspection, clear_color=True)
+        message = "Color cleared."
+    refreshed = inspect_native_patch()
+    return {
+        "result": {"action": "set-color", "color_id": color_id},
+        "state": bridge_state(inspection=refreshed, settings=settings, message=message),
+    }
+
+
+def bridge_set_nickname(nickname: str | None) -> dict[str, Any]:
+    inspection = inspect_native_patch()
+    normalized = normalize_nickname(nickname)
+    if normalized:
+        settings = save_public_settings(inspection=inspection, updater={"nickname": normalized})
+        message = "Nickname saved."
+    else:
+        settings = save_public_settings(inspection=inspection, clear_nickname=True)
+        message = "Nickname cleared."
+    refreshed = inspect_native_patch()
+    return {
+        "result": {"action": "set-nickname", "nickname": normalized},
+        "state": bridge_state(inspection=refreshed, settings=settings, message=message),
+    }
+
+
 def rehearsal_copy_path(version: str) -> Path:
     return NATIVE_WORK_ROOT / version / f"claude-{version}-patched"
 
@@ -2074,4 +2278,42 @@ def restore_native_patch() -> dict[str, Any]:
         "restored_companion_name": restored_companion_name,
         "restored_surfaces": [item["label"] for item in OFFICIAL_BUDDY_SURFACES],
         "restored_at": now_iso(),
+    }
+
+
+def bridge_apply() -> dict[str, Any]:
+    before_state = bridge_state()
+    current_visual = before_state.get("current_visual") or {}
+    inspection = inspect_native_patch()
+    save_public_settings(inspection=inspection)
+    result = apply_installed_patch()
+    after_state = bridge_state()
+    result_card = bridge_result_card(
+        title_key="result_apply_title",
+        status="ok",
+        detail="Applied. Restart Claude Code to reload the official Buddy.",
+        next_step="Restart Claude Code to reload the official Buddy.",
+        summary_lines=summarize_visual_changes(current_visual, after_state.get("current_visual") or {}),
+    )
+    return {
+        "result": {"action": "apply", "apply_result": result, "result_card": result_card},
+        "state": bridge_state(result_card=result_card),
+    }
+
+
+def bridge_restore() -> dict[str, Any]:
+    before_state = bridge_state()
+    current_visual = before_state.get("current_visual") or {}
+    result = restore_native_patch()
+    after_state = bridge_state()
+    result_card = bridge_result_card(
+        title_key="result_restore_title",
+        status="ok",
+        detail="Restored original Buddy customization.",
+        next_step="The official Buddy has been restored.",
+        summary_lines=summarize_visual_changes(current_visual, after_state.get("current_visual") or {}),
+    )
+    return {
+        "result": {"action": "restore", "restore_result": result, "result_card": result_card},
+        "state": bridge_state(result_card=result_card),
     }
