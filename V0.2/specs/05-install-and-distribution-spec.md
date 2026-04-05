@@ -27,6 +27,13 @@ The current public package is a standalone CLI.
 
 The menu experience must start from the `buddyhub` command itself.
 
+Current architecture transition rule:
+
+- npm remains the only public install path
+- the long-term UI target is Ink
+- Python may remain behind the package as a private runtime dependency during V0.2
+- users should not be asked to launch Python files directly
+
 ## 4. Current Non-Goals
 
 This phase does not require public documentation for:
@@ -44,3 +51,4 @@ This spec is satisfied when:
 1. npm install gives the user a runnable `buddyhub` command
 2. the README documents npm as the public install path
 3. launch enters the standalone menu, not a plugin command surface
+4. when Ink becomes the public UI, installation wording does not need to change

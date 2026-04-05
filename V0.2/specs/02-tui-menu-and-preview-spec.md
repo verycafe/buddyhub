@@ -7,6 +7,12 @@
 
 Define the current standalone TUI interaction contract.
 
+V0.2 当前的 UI 迁移方向是：
+
+- Ink 作为目标公开 UI
+- 现有 Python `curses` TUI 作为过渡实现和行为参考
+- 在 Ink 完整覆盖公开菜单前，Python TUI 仍可作为稳定参考面
+
 ## 2. Top-Level Menu
 
 The active top-level menu is:
@@ -22,6 +28,8 @@ The active top-level menu is:
 The left side should show menu structure only.
 
 It should not duplicate current user values that are already visible in the preview area.
+
+`DEV` 分支上的 Ink 原型必须遵守同样的菜单层级规则。
 
 ## 3. Input Rules
 
@@ -71,6 +79,8 @@ The preview should feel closer to the official `/buddy` card:
 
 The preview must be based on the real installed Buddy state plus the current in-menu selection.
 
+Ink UI 与 Python TUI 都必须遵守这个规则。
+
 ## 8. Result Screen
 
 `Apply`, `Restore`, and `Uninstall` should show a result screen with:
@@ -78,6 +88,11 @@ The preview must be based on the real installed Buddy state plus the current in-
 - status
 - summary
 - next-step guidance
+
+当前迁移阶段允许：
+
+- Ink 通过 JSON bridge 复用 Python 核心行为
+- 但不允许 Ink 自己重新发明另一套 apply/restore 规则
 
 ## 9. Acceptance
 
@@ -87,3 +102,4 @@ This spec is satisfied when:
 2. `Enter` and `Esc` behave predictably across submenus
 3. nickname input works as a real text field
 4. preview reflects the real installed Buddy instead of a fake default mascot
+5. Ink 原型与 Python 稳定实现在公开菜单语义上保持一致

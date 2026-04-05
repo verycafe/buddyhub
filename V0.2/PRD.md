@@ -122,6 +122,39 @@ BuddyHub 首次启动时应：
   - 清理旧插件痕迹
   - 安排 package manager 卸载
 
+## 6.5 UI 架构迁移计划
+
+V0.2 当前已经确认：
+
+- Ink 更适合作为 BuddyHub 的最终菜单 UI
+- 当前 Python patch/detection 核心已经有较高验证积累
+- 因此不应在 V0.2 中同时重写 UI 和 patch 核心
+
+当前计划是：
+
+1. `DEV` 分支继续推进 Ink UI
+2. Ink 逐步接管：
+   - 一级菜单
+   - 二级菜单
+   - 昵称输入
+   - 预览
+   - `Apply`
+   - `Restore`
+   - `Setup`
+3. Python 侧在当前阶段只保留：
+   - `buddyhub_core.py`
+   - 一个稳定 JSON bridge
+4. 当前 Python `curses` TUI 进入冻结状态：
+   - 只允许修兼容性或阻塞性问题
+   - 不再继续作为未来产品主界面投入新的体验打磨
+5. 在 Ink 菜单完整覆盖公开能力之前，不切换当前公开主入口
+6. 是否彻底移除 Python 核心并重写为 Node，不属于当前 V0.2 决策范围
+
+这意味着：
+
+- V0.2 的目标是 `Ink 成为唯一公开 UI`
+- 不是 `立即把全部 patch 核心改写成 Node`
+
 ## 7. 设计原则
 
 ### 7.1 真实 Buddy 优先
@@ -155,6 +188,20 @@ V0.2 当前先把：
 
 element 不在当前对外范围里。
 
+### 7.5 迁移纯度原则
+
+BuddyHub 的“纯粹化”优先级是：
+
+1. 先统一公开 UI
+2. 再考虑是否统一核心语言
+
+因此当前优先级应是：
+
+- 先让 `buddyhub` 进入 Ink 菜单
+- 再考虑未来是否需要移除 Python bridge / Python core
+
+不应该为了技术栈统一而在当前阶段同时重写已验证的 patch 核心。
+
 ## 8. 当前非目标
 
 V0.2 明确不做：
@@ -176,3 +223,4 @@ V0.2 明确不做：
 4. 右侧预览基于本机真实 Buddy 状态
 5. `Apply` 后重启 Claude Code，右下角 Buddy 与 `/buddy` 卡片表现一致
 6. `Restore` 和 `Uninstall` 都不要求用户自己手工查内部文件
+7. `DEV` 分支上的 Ink 迁移不改变当前已验证 patch 核心的安全行为

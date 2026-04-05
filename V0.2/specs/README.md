@@ -10,6 +10,11 @@ When code changes the live behavior, update these specs and:
 
 - [../SPEC-STATUS.md](/Users/tvwoo/Projects/buddyhub/V0.2/SPEC-STATUS.md)
 
+When architecture direction changes, record it in:
+
+- [../PRD.md](/Users/tvwoo/Projects/buddyhub/V0.2/PRD.md)
+- the directly affected implementation specs in this folder
+
 ## Active Specs
 
 - [01-customization-model-spec.md](/Users/tvwoo/Projects/buddyhub/V0.2/specs/01-customization-model-spec.md)
