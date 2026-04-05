@@ -9,10 +9,14 @@ from buddyhub_core import (
     LANGUAGE_ORDER,
     bridge_apply,
     bridge_restore,
+    bridge_retry_detection,
+    bridge_set_binary_path,
     bridge_set_color,
+    bridge_set_config_path,
     bridge_set_language,
     bridge_set_nickname,
     bridge_state,
+    bridge_uninstall,
     bridge_ui_model,
 )
 
@@ -40,6 +44,18 @@ def run_action(args: argparse.Namespace) -> dict[str, Any]:
         payload = bridge_set_language(args.language_id)
         return ok_payload(state=payload["state"], result=payload["result"])
 
+    if args.command == "set-binary-path":
+        payload = bridge_set_binary_path(args.path)
+        return ok_payload(state=payload["state"], result=payload["result"])
+
+    if args.command == "set-config-path":
+        payload = bridge_set_config_path(args.path)
+        return ok_payload(state=payload["state"], result=payload["result"])
+
+    if args.command == "retry-detection":
+        payload = bridge_retry_detection()
+        return ok_payload(state=payload["state"], result=payload["result"])
+
     if args.command == "set-color":
         if args.color_id == "default":
             payload = bridge_set_color(None)
@@ -63,6 +79,10 @@ def run_action(args: argparse.Namespace) -> dict[str, Any]:
         payload = bridge_restore()
         return ok_payload(state=payload["state"], result=payload["result"])
 
+    if args.command == "uninstall":
+        payload = bridge_uninstall()
+        return ok_payload(state=payload["state"], result=payload["result"])
+
     raise RuntimeError(f"Unknown command: {args.command}")
 
 
@@ -76,6 +96,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser_language = subparsers.add_parser("set-language")
     parser_language.add_argument("language_id", choices=LANGUAGE_ORDER)
 
+    parser_binary = subparsers.add_parser("set-binary-path")
+    parser_binary.add_argument("path", nargs="?", default=None)
+
+    parser_config = subparsers.add_parser("set-config-path")
+    parser_config.add_argument("path", nargs="?", default=None)
+
     parser_color = subparsers.add_parser("set-color")
     parser_color.add_argument("color_id", choices=["default", "green", "orange", "blue", "pink", "purple", "red", "black", "white"])
 
@@ -83,8 +109,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser_nickname.add_argument("nickname")
 
     subparsers.add_parser("clear-nickname")
+    subparsers.add_parser("retry-detection")
     subparsers.add_parser("apply")
     subparsers.add_parser("restore")
+    subparsers.add_parser("uninstall")
     return parser
 
 

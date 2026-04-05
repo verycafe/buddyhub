@@ -20,6 +20,8 @@ Then launch BuddyHub:
 buddyhub
 ```
 
+BuddyHub currently requires Python 3 to be available on the machine. If it is not on `PATH`, set `BUDDYHUB_PYTHON` before launching.
+
 On first launch, BuddyHub uses the system locale for the menu language when it can detect one cleanly.
 
 ## Platform Detection

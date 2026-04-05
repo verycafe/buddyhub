@@ -20,6 +20,8 @@ npm install -g github:verycafe/buddyhub
 buddyhub
 ```
 
+BuddyHub 当前仍需要机器上可用的 Python 3。如果它不在 `PATH` 中，请在启动前设置 `BUDDYHUB_PYTHON`。
+
 首次启动时，如果系统语言可以被可靠识别，BuddyHub 会默认使用系统语言作为菜单语言。
 
 ## 平台探测

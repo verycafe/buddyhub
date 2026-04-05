@@ -98,6 +98,7 @@ LANGUAGE_PRESETS: dict[str, dict[str, str]] = {
 
 LANGUAGE_ORDER = ["zh_cn", "en", "ja", "ko", "de", "fr", "ru"]
 TOP_LEVEL_MENU = ["language", "color", "nickname", "apply", "restore", "uninstall", "quit"]
+SETUP_MENU = ["binary", "config", "retry", "continue", "quit"]
 VISIBLE_ELEMENT_CONTROLS = False
 PUBLIC_COLOR_ORDER = ["green", "orange", "blue", "pink", "purple", "red", "black", "white"]
 
@@ -1640,6 +1641,80 @@ def bridge_ui_model(*, inspection: dict[str, Any] | None = None) -> dict[str, An
             if color_id in COLOR_PRESETS
         ],
         "top_level_menu": list(TOP_LEVEL_MENU),
+        "setup_menu": list(SETUP_MENU),
+    }
+
+
+def setup_intro_message(inspection: dict[str, Any]) -> str:
+    detection = inspection.get("detection") or {}
+    companion = inspection.get("companion_config") or {}
+    reasons = [str(detection.get("reason") or "").strip(), str(companion.get("reason") or "").strip()]
+    for reason in reasons:
+        if reason:
+            return reason
+    return "BuddyHub could not fully detect your Claude Code installation. Use Setup to guide it."
+
+
+def binary_reference_lines(inspection: dict[str, Any]) -> list[str]:
+    lines: list[str] = []
+    launcher = shutil.which("claude")
+    if launcher:
+        lines.append(f"Launcher: {launcher}")
+        try:
+            resolved = str(Path(launcher).resolve())
+        except OSError:
+            resolved = launcher
+        if resolved != launcher:
+            lines.append(f"Resolved target: {resolved}")
+    detection = inspection.get("detection") or {}
+    target_path = detection.get("target_path")
+    if target_path and not any(target_path in line for line in lines):
+        lines.append(f"Binary reference: {target_path}")
+    if sys.platform == "win32":
+        lines.append("Hint: where claude")
+        lines.append("Hint: claude doctor")
+    else:
+        lines.append("Hint: which claude")
+        lines.append("Hint: claude doctor")
+    return lines
+
+
+def config_reference_lines(inspection: dict[str, Any]) -> list[str]:
+    lines: list[str] = []
+    companion = inspection.get("companion_config") or {}
+    current_path = companion.get("path")
+    if current_path:
+        lines.append(f"Config reference: {current_path}")
+    default_path = str(CLAUDE_JSON_FILE)
+    if current_path != default_path:
+        lines.append(f"Default config: {default_path}")
+    lines.append("Hint: claude doctor")
+    return lines
+
+
+def bridge_setup_model(
+    inspection: dict[str, Any],
+    effective_settings: dict[str, Any],
+) -> dict[str, Any]:
+    detection = inspection.get("detection") or {}
+    companion = inspection.get("companion_config") or {}
+    return {
+        "intro": setup_intro_message(inspection),
+        "binary": {
+            "detected": bool(detection.get("target_detected")),
+            "detected_path": detection.get("target_path"),
+            "saved_path": effective_settings.get("claude_binary_path"),
+            "reason": detection.get("reason"),
+            "reference_lines": binary_reference_lines(inspection),
+        },
+        "config": {
+            "detected": bool(companion.get("exists")),
+            "detected_path": companion.get("path"),
+            "saved_path": effective_settings.get("claude_json_path"),
+            "reason": companion.get("reason"),
+            "reference_lines": config_reference_lines(inspection),
+        },
+        "menu": list(SETUP_MENU),
     }
 
 
@@ -1658,12 +1733,14 @@ def bridge_state(
     draft_visual = build_public_draft_visual(inspection, effective_settings)
     detection = inspection.get("detection") or {}
     companion = inspection.get("companion_config") or {}
+    needs_setup = (not detection.get("target_detected")) or (not companion.get("exists"))
     return {
         "settings": effective_settings,
         "current_visual": current_visual,
         "draft_visual": draft_visual,
-        "screen": "setup" if (not detection.get("target_detected") or not companion.get("exists")) else "main",
-        "needs_setup": (not detection.get("target_detected")) or (not companion.get("exists")),
+        "screen": "setup" if needs_setup else "main",
+        "needs_setup": needs_setup,
+        "setup": bridge_setup_model(inspection, effective_settings),
         "message": message,
         "result_card": result_card,
         "exit_notice": exit_notice,
@@ -1739,6 +1816,36 @@ def bridge_set_nickname(nickname: str | None) -> dict[str, Any]:
     return {
         "result": {"action": "set-nickname", "nickname": normalized},
         "state": bridge_state(inspection=refreshed, settings=settings, message=message),
+    }
+
+
+def bridge_set_binary_path(binary_path: str | None) -> dict[str, Any]:
+    inspection = inspect_native_patch()
+    normalized = normalize_optional_path(binary_path)
+    settings = save_public_settings(inspection=inspection, updater={"claude_binary_path": normalized})
+    refreshed = inspect_native_patch()
+    return {
+        "result": {"action": "set-binary-path", "claude_binary_path": normalized},
+        "state": bridge_state(inspection=refreshed, settings=settings, message="Claude binary path saved."),
+    }
+
+
+def bridge_set_config_path(config_path: str | None) -> dict[str, Any]:
+    inspection = inspect_native_patch()
+    normalized = normalize_optional_path(config_path)
+    settings = save_public_settings(inspection=inspection, updater={"claude_json_path": normalized})
+    refreshed = inspect_native_patch()
+    return {
+        "result": {"action": "set-config-path", "claude_json_path": normalized},
+        "state": bridge_state(inspection=refreshed, settings=settings, message="Claude config path saved."),
+    }
+
+
+def bridge_retry_detection() -> dict[str, Any]:
+    refreshed = inspect_native_patch()
+    return {
+        "result": {"action": "retry-detection"},
+        "state": bridge_state(inspection=refreshed, message=setup_intro_message(refreshed)),
     }
 
 
@@ -2316,4 +2423,39 @@ def bridge_restore() -> dict[str, Any]:
     return {
         "result": {"action": "restore", "restore_result": result, "result_card": result_card},
         "state": bridge_state(result_card=result_card),
+    }
+
+
+def bridge_uninstall() -> dict[str, Any]:
+    before_state = bridge_state()
+    current_visual = before_state.get("current_visual") or {}
+    summary_lines: list[str] = []
+    restored = None
+    inspection = inspect_native_patch()
+    patch_state = inspection.get("patch_state") or {}
+    if patch_state.get("installed"):
+        restored = restore_native_patch()
+        after_restore = bridge_state()
+        summary_lines.extend(summarize_visual_changes(current_visual, after_restore.get("current_visual") or {}))
+    removed_paths = cleanup_legacy_plugin_traces()
+    uninstall_job = schedule_self_uninstall(remove_data_root=True)
+    if removed_paths:
+        summary_lines.append(f"Legacy traces removed: {len(removed_paths)}")
+    summary_lines.append(f"Install source: {uninstall_job['install_context']['source']}")
+    detail = "BuddyHub cleanup has been scheduled. This window will now close."
+    result_card = bridge_result_card(
+        title_key="result_uninstall_title",
+        status="ok",
+        detail=detail,
+        next_step=None,
+        summary_lines=summary_lines,
+    )
+    return {
+        "result": {
+            "action": "uninstall",
+            "restore_result": restored,
+            "uninstall_job": uninstall_job,
+            "result_card": result_card,
+        },
+        "state": bridge_state(result_card=result_card, exit_notice=detail),
     }
