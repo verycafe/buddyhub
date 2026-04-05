@@ -639,6 +639,7 @@ LANGUAGE_ORDER = ["zh_cn", "en", "ja", "zh_hans", "de", "fr", "ru"]
 TOP_LEVEL_MENU = ["language", "color", "nickname", "apply", "restore", "uninstall", "quit"]
 VISIBLE_ELEMENT_CONTROLS = False
 SETUP_MENU = ["binary", "config", "retry", "continue", "quit"]
+ENTER_KEYS = (curses.KEY_ENTER, 10, 13, "\n", "\r")
 
 
 class BuddyHubTUI:
@@ -1570,7 +1571,7 @@ class BuddyHubTUI:
             self.handle_path_key(key)
             return
         if self.screen == "result":
-            if key in ("q", "Q", 27, curses.KEY_ENTER, 10, 13):
+            if key in ("q", "Q", 27, *ENTER_KEYS):
                 self.screen = "main"
                 self.result_card = None
             return
@@ -1596,7 +1597,7 @@ class BuddyHubTUI:
                 self.selection[self.screen] = (self.selection[self.screen] + 1) % size
             return
 
-        if key in (curses.KEY_ENTER, 10, 13):
+        if key in ENTER_KEYS:
             self.activate_current()
 
     def activate_current(self) -> None:
@@ -1665,7 +1666,7 @@ class BuddyHubTUI:
             self.screen = "main"
             self.nickname_buffer = ""
             return
-        if key in (curses.KEY_ENTER, 10, 13):
+        if key in ENTER_KEYS:
             self.save_nickname(self.nickname_buffer)
             self.nickname_buffer = ""
             self.screen = "main"
@@ -1681,7 +1682,7 @@ class BuddyHubTUI:
             self.screen = "setup"
             self.path_buffer = ""
             return
-        if key in (curses.KEY_ENTER, 10, 13):
+        if key in ENTER_KEYS:
             value = normalize_optional_path(self.path_buffer)
             if self.screen == "setup_binary_input":
                 if value:
