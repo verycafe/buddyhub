@@ -11,7 +11,7 @@ Its target is only the existing Buddy in the bottom-right Claude Code UI.
 BuddyHub is now focused on one problem only:
 
 - enhance the user's real official Buddy with configurable additive visual elements
-- provide a guided customization flow for element, color, and optional nickname behavior
+- provide a native-menu customization flow for color and optional nickname behavior while keeping element switching hidden in the current release
 - apply the saved customization and prompt the user to restart Claude Code
 
 BuddyHub is not currently focused on:

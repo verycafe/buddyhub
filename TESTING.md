@@ -62,7 +62,7 @@ The required order is:
 Verify:
 
 - `/buddyhub:settings` returns quickly and points the user to `/config`
-- `/config` exposes BuddyHub native element, color, and nickname options
+- `/config` exposes BuddyHub native color and nickname options
 - `/buddyhub:inspect` shows saved settings, native menu overrides, effective settings, and unsupported blockers or warnings
 - preview remains advisory, not as live-applied output
 
@@ -70,7 +70,6 @@ Verify:
 
 Verify:
 
-- selecting a supported element in `/config` becomes visible through `/buddyhub:inspect`
 - switching from one supported element to another reuses the clean backup and does not require a manual restore step in between
 - selecting verified `green`, `orange`, `blue`, `pink`, `purple`, `red`, or `black` in `/config` is reflected in `/buddyhub:inspect` and can be applied
 - selecting `white` in `/config` remains pending

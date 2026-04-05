@@ -12,7 +12,6 @@ BuddyHub settings now live in Claude Code's native config menu.
 1. Run `/config`
 2. Search for `BuddyHub`
 3. Configure:
-   - exactly one Element toggle
    - at most one Color toggle
    - optional Nickname
 4. Run `/buddyhub:apply`
@@ -21,4 +20,6 @@ BuddyHub settings now live in Claude Code's native config menu.
 ## Notes
 
 - `/buddyhub:settings` is now a fast help/menu entry and does not run a long inspection script.
+- The current release exposes only Color and Nickname in the native menu.
+- Element switching is hidden in this version.
 - Use `/buddyhub:inspect` to see the current saved settings, native menu overrides, effective settings, and blockers.

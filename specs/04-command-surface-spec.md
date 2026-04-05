@@ -60,7 +60,6 @@ Must explain:
 
 Must let the user:
 
-- choose an element
 - choose a color preset
 - set or clear a nickname
 - access preview behavior
@@ -73,11 +72,11 @@ In the current validated public plugin surface, `settings` must behave as a fast
 That native-menu flow must:
 
 - expose BuddyHub plugin options through `manifest.userConfig`
-- let the user choose exactly one element toggle
 - let the user choose at most one color toggle
 - let the user provide an optional nickname
 - keep `/buddyhub:settings` itself lightweight and non-blocking
 - direct the user to `/buddyhub:inspect` for effective settings, blockers, and preview details
+- keep element switching hidden in the current public release
 
 ### 4.3 Inspect
 

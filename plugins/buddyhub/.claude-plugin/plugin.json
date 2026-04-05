@@ -1,29 +1,11 @@
 {
   "name": "buddyhub",
-  "version": "0.1.24",
+  "version": "0.1.25",
   "description": "Experimental native visual customization tooling for the official Claude Code Buddy.",
   "author": {
     "name": "verycafe"
   },
   "userConfig": {
-    "element_tophat": {
-      "type": "boolean",
-      "title": "Element: Top Hat",
-      "description": "Enable the Top Hat element. Turn on exactly one BuddyHub element toggle at a time.",
-      "default": false
-    },
-    "element_coffee": {
-      "type": "boolean",
-      "title": "Element: Coffee Cup",
-      "description": "Enable the Coffee Cup element. Turn on exactly one BuddyHub element toggle at a time.",
-      "default": false
-    },
-    "element_book": {
-      "type": "boolean",
-      "title": "Element: Book",
-      "description": "Enable the Book element. Turn on exactly one BuddyHub element toggle at a time.",
-      "default": false
-    },
     "color_green": {
       "type": "boolean",
       "title": "Color: Green",
