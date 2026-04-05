@@ -1,15 +1,24 @@
 ---
-description: Show deterministic official Buddy customization settings and commands
-model: haiku
+description: Open BuddyHub native settings guidance
 disable-model-invocation: true
-allowed-tools: Bash(python3:*)
 ---
 
-!`python3 "${CLAUDE_PLUGIN_ROOT}/scripts/buddyhub.py" settings`
+# BuddyHub Settings
 
-Present the command output directly to the user.
-- Preserve headings, bullets, file paths, booleans, and code formatting.
-- Do not paraphrase, summarize, or add commentary before or after it.
-- Do not pretend unsupported color settings are active.
-- Nickname is only active when the output explicitly says it can apply through the Claude runtime config.
-- Do not call any additional tools.
+BuddyHub settings now live in Claude Code's native config menu.
+
+## Native Menu
+
+1. Run `/config`
+2. Search for `BuddyHub`
+3. Configure:
+   - exactly one Element toggle
+   - at most one Color toggle
+   - optional Nickname
+4. Run `/buddyhub:apply`
+5. Restart Claude Code
+
+## Notes
+
+- `/buddyhub:settings` is now a fast help/menu entry and does not run a long inspection script.
+- Use `/buddyhub:inspect` to see the current saved settings, native menu overrides, effective settings, and blockers.

@@ -81,6 +81,7 @@ def cmd_help(_: argparse.Namespace) -> int:
     identity = inspection["identity"]
     companion_config = inspection["companion_config"]
     settings = inspection["settings"]
+    effective_settings = inspection.get("effective_settings") or settings
     customization = inspection["customization"]
     current_profile = inspection.get("current_profile") or {}
     lines = [
@@ -111,6 +112,9 @@ def cmd_help(_: argparse.Namespace) -> int:
         f"- Saved element: `{settings.get('element_id') or 'none'}`",
         f"- Saved color: `{settings.get('color_id') or 'none'}`",
         f"- Saved nickname: `{settings.get('nickname') or 'none'}`",
+        f"- Effective element: `{effective_settings.get('element_id') or 'none'}`",
+        f"- Effective color: `{effective_settings.get('color_id') or 'none'}`",
+        f"- Effective nickname: `{effective_settings.get('nickname') or 'none'}`",
         f"- Apply ready: `{str(customization.get('can_apply', False)).lower()}`",
     ]
     if current_profile.get("profile_id"):
@@ -148,6 +152,8 @@ def cmd_settings(args: argparse.Namespace) -> int:
     identity = inspection["identity"]
     companion_config = inspection["companion_config"]
     customization = inspection["customization"]
+    effective_settings = inspection.get("effective_settings") or customization["effective_settings"]
+    runtime_overrides = inspection.get("runtime_overrides") or {}
     current_profile = inspection.get("current_profile") or {}
     preview_lines = preview_lines_for_customization(customization)
 
@@ -155,6 +161,8 @@ def cmd_settings(args: argparse.Namespace) -> int:
         print_json(
             {
                 "settings": settings,
+                "effective_settings": effective_settings,
+                "runtime_overrides": runtime_overrides,
                 "identity": identity,
                 "companion_config": companion_config,
                 "detection": detection,
@@ -181,9 +189,9 @@ def cmd_settings(args: argparse.Namespace) -> int:
         f"- Element: `{settings.get('element_id') or 'none'}`",
         f"- Color: `{settings.get('color_id') or 'none'}`",
         f"- Nickname: `{settings.get('nickname') or 'none'}`",
-        f"- Effective element on apply: `{customization['effective_settings'].get('element_id') or 'none'}`",
-        f"- Effective color on apply: `{customization['effective_settings'].get('color_id') or 'none'}`",
-        f"- Effective nickname on apply: `{customization['effective_settings'].get('nickname') or 'none'}`",
+        f"- Effective element on apply: `{effective_settings.get('element_id') or 'none'}`",
+        f"- Effective color on apply: `{effective_settings.get('color_id') or 'none'}`",
+        f"- Effective nickname on apply: `{effective_settings.get('nickname') or 'none'}`",
         "",
         "## Apply status",
         "",
@@ -200,6 +208,18 @@ def cmd_settings(args: argparse.Namespace) -> int:
     warnings = customization.get("apply_warnings") or []
     if warnings:
         lines.extend(["", "## Pending unsupported settings", "", *[f"- {warning}" for warning in warnings]])
+    if runtime_overrides.get("has_any_value"):
+        lines.extend(
+            [
+                "",
+                "## Native menu overrides",
+                "",
+                f"- Source: `{runtime_overrides.get('source') or 'unknown'}`",
+                f"- Element toggles enabled: `{', '.join(runtime_overrides.get('selected_elements') or []) or 'none'}`",
+                f"- Color toggles enabled: `{', '.join(runtime_overrides.get('selected_colors') or []) or 'none'}`",
+                f"- Nickname from native menu: `{runtime_overrides.get('nickname') or 'blank'}`",
+            ]
+        )
 
     available_colors = [option for option in customization["color_options"] if option["available"]]
 
@@ -251,12 +271,12 @@ def cmd_settings(args: argparse.Namespace) -> int:
             f"- Element placement note: {selected_element['description']}",
             (
                 f"- Color preview: `{selected_color['label']}`"
-                if selected_color and customization['effective_settings'].get('color_id')
+                if selected_color and effective_settings.get('color_id')
                 else "- Color preview: `unavailable on current target`"
             ),
             (
-                f"- Nickname preview: `{customization['effective_settings'].get('nickname')}`"
-                if customization['effective_settings'].get('nickname')
+                f"- Nickname preview: `{effective_settings.get('nickname')}`"
+                if effective_settings.get('nickname')
                 else "- Nickname preview: `unavailable on current target`"
             ),
             "- This preview is advisory. The official Buddy still requires `/buddyhub:apply` and a Claude Code restart.",
@@ -270,18 +290,10 @@ def cmd_settings(args: argparse.Namespace) -> int:
             "## Quick commands",
             "",
             "- `/buddyhub:settings`",
-            "- `/buddyhub:settings --element tophat`",
-            "- `/buddyhub:settings --element coffee`",
-            "- `/buddyhub:settings --element book`",
-            "- `/buddyhub:settings --reset`",
+            "- `/config`",
             "- `/buddyhub:apply`",
         ]
     )
-    if available_colors:
-        lines.insert(len(lines) - 2, "- `/buddyhub:settings --color <preset>`")
-    if customization["nickname_supported"]:
-        lines.insert(len(lines) - 2, "- `/buddyhub:settings --nickname <short-name>`")
-        lines.insert(len(lines) - 2, "- `/buddyhub:settings --clear-nickname`")
     print("\n".join(lines))
     return 0
 
@@ -299,6 +311,8 @@ def cmd_inspect(args: argparse.Namespace) -> int:
     identity = info["identity"]
     companion_config = info["companion_config"]
     settings = info["settings"]
+    effective_settings = info.get("effective_settings") or settings
+    runtime_overrides = info.get("runtime_overrides") or {}
     customization = info["customization"]
     current_profile = info.get("current_profile") or {}
     selected_target_status = info.get("selected_target_status") or {}
@@ -320,12 +334,17 @@ def cmd_inspect(args: argparse.Namespace) -> int:
         f"- Saved element: `{settings.get('element_id') or 'none'}`",
         f"- Saved color: `{settings.get('color_id') or 'none'}`",
         f"- Saved nickname: `{settings.get('nickname') or 'none'}`",
+        f"- Effective element on apply: `{effective_settings.get('element_id') or 'none'}`",
+        f"- Effective color on apply: `{effective_settings.get('color_id') or 'none'}`",
+        f"- Effective nickname on apply: `{effective_settings.get('nickname') or 'none'}`",
         f"- Selected customization can apply: `{str(info['profile_match']).lower()}`",
-        f"- Effective element on apply: `{customization['effective_settings'].get('element_id') or 'none'}`",
-        f"- Effective color on apply: `{customization['effective_settings'].get('color_id') or 'none'}`",
-        f"- Effective nickname on apply: `{customization['effective_settings'].get('nickname') or 'none'}`",
         f"- Selected target patch status: `{selected_target_status.get('status') or 'unknown'}`",
     ]
+    if runtime_overrides.get("has_any_value"):
+        lines.append(f"- Native menu source: `{runtime_overrides.get('source')}`")
+        lines.append(f"- Native element toggles: `{', '.join(runtime_overrides.get('selected_elements') or []) or 'none'}`")
+        lines.append(f"- Native color toggles: `{', '.join(runtime_overrides.get('selected_colors') or []) or 'none'}`")
+        lines.append(f"- Native nickname: `{runtime_overrides.get('nickname') or 'blank'}`")
     if surface_sync.get("surfaces"):
         labels = ", ".join(item["label"] for item in surface_sync["surfaces"])
         lines.append(f"- Synced official surfaces: `{labels}`")
@@ -510,6 +529,8 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     identity = payload["identity"]
     companion_config = payload["companion_config"]
     settings = payload["settings"]
+    effective_settings = payload.get("effective_settings") or settings
+    runtime_overrides = payload.get("runtime_overrides") or {}
     customization = payload["customization"]
     current_profile = payload.get("current_profile") or {}
     selected_target_status = payload.get("selected_target_status") or {}
@@ -533,10 +554,10 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         f"- Saved element: `{settings.get('element_id') or 'none'}`",
         f"- Saved color: `{settings.get('color_id') or 'none'}`",
         f"- Saved nickname: `{settings.get('nickname') or 'none'}`",
+        f"- Effective element on apply: `{effective_settings.get('element_id') or 'none'}`",
+        f"- Effective color on apply: `{effective_settings.get('color_id') or 'none'}`",
+        f"- Effective nickname on apply: `{effective_settings.get('nickname') or 'none'}`",
         f"- Selected customization can apply: `{str(payload['profile_match']).lower()}`",
-        f"- Effective element on apply: `{customization['effective_settings'].get('element_id') or 'none'}`",
-        f"- Effective color on apply: `{customization['effective_settings'].get('color_id') or 'none'}`",
-        f"- Effective nickname on apply: `{customization['effective_settings'].get('nickname') or 'none'}`",
         f"- Selected profile id: `{(customization.get('profile') or {}).get('profile_id') or 'none'}`",
         f"- Selected target patch status: `{selected_target_status.get('status') or 'unknown'}`",
         f"- Current installed Buddy element: `{current_profile.get('element_id') or 'none'}`",
@@ -551,6 +572,11 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         f"- Work root: `{payload['work_root']}`",
         f"- Claude CLI available: `{str(shutil.which('claude') is not None).lower()}`",
     ]
+    if runtime_overrides.get("has_any_value"):
+        lines.append(f"- Native menu source: `{runtime_overrides.get('source')}`")
+        lines.append(f"- Native element toggles: `{', '.join(runtime_overrides.get('selected_elements') or []) or 'none'}`")
+        lines.append(f"- Native color toggles: `{', '.join(runtime_overrides.get('selected_colors') or []) or 'none'}`")
+        lines.append(f"- Native nickname: `{runtime_overrides.get('nickname') or 'blank'}`")
     if surface_sync.get("surfaces"):
         labels = ", ".join(item["label"] for item in surface_sync["surfaces"])
         lines.append(f"- Synced official surfaces: `{labels}`")
@@ -593,7 +619,7 @@ def cmd_hook(args: argparse.Namespace) -> int:
     try:
         inspection = inspect_native_patch(create_manifest=True)
         customization = inspection["customization"]
-        settings = inspection["settings"]
+        settings = inspection.get("effective_settings") or inspection["settings"]
         detection = inspection["detection"]
         already_patched = inspection.get("target_appears_patched", False)
 
@@ -617,7 +643,7 @@ def cmd_hook(args: argparse.Namespace) -> int:
                 emit_hook_response(
                     suppress_output=False,
                     system_message=(
-                        "BuddyHub found saved Buddy customization settings that cannot be auto-applied on this target: "
+                        "BuddyHub found current Buddy customization settings that cannot be auto-applied on this target: "
                         + ", ".join(selected_values)
                         + ". Ask the user to review `/buddyhub:settings` before continuing."
                     ),
@@ -629,11 +655,11 @@ def cmd_hook(args: argparse.Namespace) -> int:
         result = apply_installed_patch()
         warning_suffix = ""
         if result.get("apply_warnings"):
-            warning_suffix = " Some saved settings remain pending: " + "; ".join(result["apply_warnings"])
+            warning_suffix = " Some current settings remain pending: " + "; ".join(result["apply_warnings"])
         emit_hook_response(
             suppress_output=False,
             system_message=(
-                "BuddyHub auto-applied the saved official Buddy customization "
+                "BuddyHub auto-applied the current official Buddy customization "
                 f"(`{result['settings'].get('element_id') or 'none'}`) to the detected Claude Code target. "
                 "Ask the user to restart Claude Code to see the updated bottom-right Buddy."
                 + warning_suffix
@@ -643,7 +669,7 @@ def cmd_hook(args: argparse.Namespace) -> int:
         emit_hook_response(
             suppress_output=False,
             system_message=(
-                "BuddyHub could not auto-apply the saved official Buddy customization: "
+                "BuddyHub could not auto-apply the current official Buddy customization: "
                 f"{exc}. Ask the user to run `/buddyhub:doctor` or `/buddyhub:settings`."
             ),
         )

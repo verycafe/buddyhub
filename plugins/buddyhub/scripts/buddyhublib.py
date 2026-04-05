@@ -76,6 +76,24 @@ COLOR_PRESETS: dict[str, dict[str, Any]] = {
     "purple": {"color_id": "purple", "label": "Purple", "hex": "#9a67ff"},
 }
 
+USERCONFIG_ELEMENT_KEYS: dict[str, str] = {
+    "element_tophat": "tophat",
+    "element_coffee": "coffee",
+    "element_book": "book",
+}
+
+USERCONFIG_COLOR_KEYS: dict[str, str] = {
+    "color_green": "green",
+    "color_orange": "orange",
+    "color_blue": "blue",
+    "color_pink": "pink",
+    "color_purple": "purple",
+    "color_red": "red",
+    "color_black": "black",
+}
+
+USERCONFIG_NICKNAME_KEY = "nickname"
+
 COLOR_PATCH_PRESETS: dict[str, dict[str, dict[str, Any]]] = {
     "2.1.92": {
         "green": {
@@ -495,6 +513,89 @@ def update_customization_settings(
     return save_customization_settings(settings)
 
 
+def plugin_option_env_name(option_key: str) -> str:
+    normalized = option_key.replace("-", "_").upper()
+    return f"CLAUDE_PLUGIN_OPTION_{normalized}"
+
+
+def parse_plugin_option_bool(option_key: str) -> bool | None:
+    raw = os.environ.get(plugin_option_env_name(option_key))
+    if raw is None:
+        return None
+    value = raw.strip().lower()
+    if value in {"1", "true", "yes", "on"}:
+        return True
+    if value in {"0", "false", "no", "off", ""}:
+        return False
+    return None
+
+
+def read_plugin_option_string(option_key: str) -> str | None:
+    raw = os.environ.get(plugin_option_env_name(option_key))
+    if raw is None:
+        return None
+    return raw
+
+
+def load_userconfig_runtime_overrides() -> dict[str, Any]:
+    selected_elements = [
+        element_id
+        for option_key, element_id in USERCONFIG_ELEMENT_KEYS.items()
+        if parse_plugin_option_bool(option_key) is True
+    ]
+    selected_colors = [
+        color_id
+        for option_key, color_id in USERCONFIG_COLOR_KEYS.items()
+        if parse_plugin_option_bool(option_key) is True
+    ]
+    nickname = normalize_nickname(read_plugin_option_string(USERCONFIG_NICKNAME_KEY))
+    nickname_present = read_plugin_option_string(USERCONFIG_NICKNAME_KEY) is not None
+    return {
+        "source": "manifest.userConfig",
+        "selected_elements": selected_elements,
+        "selected_colors": selected_colors,
+        "nickname": nickname,
+        "nickname_present": nickname_present,
+        "has_any_value": bool(selected_elements or selected_colors or nickname_present),
+    }
+
+
+def merge_customization_settings_with_userconfig(
+    settings: dict[str, Any],
+    runtime_overrides: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any], list[str], list[str]]:
+    overrides = runtime_overrides or load_userconfig_runtime_overrides()
+    merged = dict(settings)
+    blockers: list[str] = []
+    warnings: list[str] = []
+
+    selected_elements = overrides.get("selected_elements") or []
+    selected_colors = overrides.get("selected_colors") or []
+
+    if len(selected_elements) > 1:
+        blockers.append(
+            "Multiple BuddyHub element toggles are enabled in `/config`. Enable exactly one element there."
+        )
+    elif len(selected_elements) == 1:
+        merged["element_id"] = selected_elements[0]
+
+    if len(selected_colors) > 1:
+        blockers.append(
+            "Multiple BuddyHub color toggles are enabled in `/config`. Enable at most one color there."
+        )
+    elif len(selected_colors) == 1:
+        merged["color_id"] = selected_colors[0]
+
+    if overrides.get("nickname_present"):
+        merged["nickname"] = overrides.get("nickname")
+        if overrides.get("nickname") is None:
+            warnings.append(
+                "BuddyHub native Nickname is blank in `/config`, so the official Buddy name will stay unchanged."
+            )
+
+    return sanitize_customization_settings(merged), blockers, warnings
+
+
 def profiles_for_version(version: str | None) -> list[dict[str, Any]]:
     if not version:
         return []
@@ -557,6 +658,11 @@ def customization_support(
     identity: dict[str, Any],
     settings: dict[str, Any],
     companion_config: dict[str, Any],
+    *,
+    saved_settings: dict[str, Any] | None = None,
+    runtime_overrides: dict[str, Any] | None = None,
+    runtime_blockers: list[str] | None = None,
+    runtime_warnings: list[str] | None = None,
 ) -> dict[str, Any]:
     profile, profile_reason = select_patch_profile(detection, identity, settings)
     selected_element = ELEMENT_CATALOG[settings["element_id"]]
@@ -616,8 +722,8 @@ def customization_support(
     )
 
     can_apply = profile is not None
-    blockers: list[str] = []
-    warnings: list[str] = []
+    blockers: list[str] = list(runtime_blockers or [])
+    warnings: list[str] = list(runtime_warnings or [])
     effective_settings = dict(settings)
     if profile is None:
         blockers.append(profile_reason)
@@ -633,7 +739,9 @@ def customization_support(
 
     return {
         "settings": settings,
+        "saved_settings": saved_settings or settings,
         "effective_settings": effective_settings,
+        "runtime_overrides": runtime_overrides or {},
         "profile": profile,
         "profile_reason": profile_reason,
         "element_options": element_options,
@@ -1175,9 +1283,23 @@ def inspect_native_patch(*, create_manifest: bool = False) -> dict[str, Any]:
     detection = detect_native_target()
     identity = current_identity_from_projects()
     companion_config = read_companion_config()
-    settings = load_customization_settings()
+    saved_settings = load_customization_settings()
+    runtime_overrides = load_userconfig_runtime_overrides()
+    settings, runtime_blockers, runtime_warnings = merge_customization_settings_with_userconfig(
+        saved_settings,
+        runtime_overrides,
+    )
     patch_state = load_native_patch_state()
-    customization = customization_support(detection, identity, settings, companion_config)
+    customization = customization_support(
+        detection,
+        identity,
+        settings,
+        companion_config,
+        saved_settings=saved_settings,
+        runtime_overrides=runtime_overrides,
+        runtime_blockers=runtime_blockers,
+        runtime_warnings=runtime_warnings,
+    )
     selected_profile = customization.get("profile")
 
     rehearsal = patch_state.get("rehearsal") or {}
@@ -1221,11 +1343,11 @@ def inspect_native_patch(*, create_manifest: bool = False) -> dict[str, Any]:
     if customization["can_apply"]:
         if customization.get("apply_warnings"):
             profile_match_reason = (
-                "Supported saved customization can be applied, but some unsupported settings will remain pending: "
+                "Current effective customization can be applied, but some unsupported settings will remain pending: "
                 + "; ".join(customization["apply_warnings"])
             )
         else:
-            profile_match_reason = "Current saved customization maps to a verified patch profile."
+            profile_match_reason = "Current effective customization maps to a verified patch profile."
     else:
         profile_match_reason = "; ".join(customization["apply_blockers"] or [customization["profile_reason"]])
 
@@ -1233,7 +1355,9 @@ def inspect_native_patch(*, create_manifest: bool = False) -> dict[str, Any]:
         "detection": detection,
         "identity": identity,
         "companion_config": companion_config,
-        "settings": settings,
+        "settings": saved_settings,
+        "effective_settings": settings,
+        "runtime_overrides": runtime_overrides,
         "customization": customization,
         "effective_profile": effective_profile,
         "backup": backup,

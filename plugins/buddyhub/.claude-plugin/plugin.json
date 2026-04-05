@@ -1,8 +1,76 @@
 {
   "name": "buddyhub",
-  "version": "0.1.22",
+  "version": "0.1.24",
   "description": "Experimental native visual customization tooling for the official Claude Code Buddy.",
   "author": {
     "name": "verycafe"
+  },
+  "userConfig": {
+    "element_tophat": {
+      "type": "boolean",
+      "title": "Element: Top Hat",
+      "description": "Enable the Top Hat element. Turn on exactly one BuddyHub element toggle at a time.",
+      "default": false
+    },
+    "element_coffee": {
+      "type": "boolean",
+      "title": "Element: Coffee Cup",
+      "description": "Enable the Coffee Cup element. Turn on exactly one BuddyHub element toggle at a time.",
+      "default": false
+    },
+    "element_book": {
+      "type": "boolean",
+      "title": "Element: Book",
+      "description": "Enable the Book element. Turn on exactly one BuddyHub element toggle at a time.",
+      "default": false
+    },
+    "color_green": {
+      "type": "boolean",
+      "title": "Color: Green",
+      "description": "Use the Green accent. Turn on at most one BuddyHub color toggle at a time.",
+      "default": false
+    },
+    "color_orange": {
+      "type": "boolean",
+      "title": "Color: Orange",
+      "description": "Use the Orange accent. Turn on at most one BuddyHub color toggle at a time.",
+      "default": false
+    },
+    "color_blue": {
+      "type": "boolean",
+      "title": "Color: Blue",
+      "description": "Use the Blue accent. Turn on at most one BuddyHub color toggle at a time.",
+      "default": false
+    },
+    "color_pink": {
+      "type": "boolean",
+      "title": "Color: Pink",
+      "description": "Use the Pink accent. Turn on at most one BuddyHub color toggle at a time.",
+      "default": false
+    },
+    "color_purple": {
+      "type": "boolean",
+      "title": "Color: Purple",
+      "description": "Use the Purple accent. Turn on at most one BuddyHub color toggle at a time.",
+      "default": false
+    },
+    "color_red": {
+      "type": "boolean",
+      "title": "Color: Red",
+      "description": "Use the Red accent. Turn on at most one BuddyHub color toggle at a time.",
+      "default": false
+    },
+    "color_black": {
+      "type": "boolean",
+      "title": "Color: Black",
+      "description": "Use the Black accent. Turn on at most one BuddyHub color toggle at a time.",
+      "default": false
+    },
+    "nickname": {
+      "type": "string",
+      "title": "Nickname",
+      "description": "Optional display nickname for the official Buddy surfaces. Leave blank to keep the official name.",
+      "default": ""
+    }
   }
 }

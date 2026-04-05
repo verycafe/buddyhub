@@ -61,20 +61,20 @@ The required order is:
 
 Verify:
 
-- `/buddyhub:settings` shows the current selected element, color, and nickname
-- unsupported settings are marked unavailable or blocked
-- preview is presented as advisory, not as live-applied output
+- `/buddyhub:settings` returns quickly and points the user to `/config`
+- `/config` exposes BuddyHub native element, color, and nickname options
+- `/buddyhub:inspect` shows saved settings, native menu overrides, effective settings, and unsupported blockers or warnings
+- preview remains advisory, not as live-applied output
 
 ### 5.2 Settings mutation
 
 Verify:
 
-- selecting a supported element is saved
+- selecting a supported element in `/config` becomes visible through `/buddyhub:inspect`
 - switching from one supported element to another reuses the clean backup and does not require a manual restore step in between
-- selecting verified `green`, `orange`, `blue`, `pink`, `purple`, `red`, or `black` is saved and can be applied
-- selecting `white` is saved but remains pending
-- setting a nickname is saved and can be applied through `~/.claude.json` on the current validated macOS target
-- `/buddyhub:settings --reset` returns to the default supported configuration
+- selecting verified `green`, `orange`, `blue`, `pink`, `purple`, `red`, or `black` in `/config` is reflected in `/buddyhub:inspect` and can be applied
+- selecting `white` in `/config` remains pending
+- setting a nickname in `/config` is reflected in `/buddyhub:inspect` and can be applied through `~/.claude.json` on the current validated macOS target
 
 ## 6. Rehearsal Test
 

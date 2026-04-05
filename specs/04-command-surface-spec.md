@@ -68,15 +68,16 @@ Must let the user:
 
 If a setting is unsupported on the current target, settings must say so explicitly.
 
-In the current validated public plugin surface, `settings` is expected to behave as a guided flow rather than a guaranteed native dropdown dialog.
+In the current validated public plugin surface, `settings` must behave as a fast menu entry that points the user to Claude Code's native `/config` surface.
 
-That guided flow must:
+That native-menu flow must:
 
-- inspect the current saved configuration first
-- present explicit element and color choices
-- save the selected values through BuddyHub commands
-- show an honest preview after each change
-- state explicitly when nickname is supported through Claude runtime config and which color presets are actually verified on the current target
+- expose BuddyHub plugin options through `manifest.userConfig`
+- let the user choose exactly one element toggle
+- let the user choose at most one color toggle
+- let the user provide an optional nickname
+- keep `/buddyhub:settings` itself lightweight and non-blocking
+- direct the user to `/buddyhub:inspect` for effective settings, blockers, and preview details
 
 ### 4.3 Inspect
 
