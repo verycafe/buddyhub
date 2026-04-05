@@ -87,6 +87,7 @@ Must show:
 - detected target path
 - current verified Buddy identity when available
 - whether the requested customization is supported on the current target
+- which official Buddy surfaces share the current name/color source
 
 ### 4.4 Apply
 
@@ -98,6 +99,7 @@ Must:
 - perform verification
 - report success only if the target patch was actually written
 - tell the user to restart Claude Code
+- make it explicit that the bottom-right Buddy and `/buddy` card will share the same verified nickname/color source after restart
 
 ### 4.5 Restore
 
@@ -106,6 +108,7 @@ Must:
 - restore the original binary from backup
 - restore the original displayed Buddy name from config backup when nickname override was applied
 - verify the restored target is usable
+- state that restore returns both the bottom-right Buddy and the `/buddy` card to the original source
 
 ### 4.6 Doctor
 
@@ -117,6 +120,7 @@ Must help diagnose:
 - failed patch application
 - failed launch verification
 - unsupported element, color, or nickname slots
+- mismatched expectations between the bottom-right Buddy and the `/buddy` card
 
 ### 4.7 Uninstall
 

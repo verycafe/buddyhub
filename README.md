@@ -43,6 +43,7 @@ BuddyHub is not currently focused on:
   - `white`
 - the official displayed Buddy name can be overridden safely through:
   - `~/.claude.json` `companion.name`
+- the bottom-right Buddy and the `/buddy` companion card share the same displayed-name and verified color sources
 - `~/.claude/pet` is not the main delivery path for the official Buddy visual enhancement goal
 
 ## Product Rule

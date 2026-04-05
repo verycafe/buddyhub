@@ -45,6 +45,7 @@ BuddyHub 当前不再把这些当作主线：
   - `white`
 - 右下角官方 Buddy 的显示名现在也已验证可通过这里安全覆盖：
   - `~/.claude.json` 的 `companion.name`
+- 右下角官方 Buddy 和 `/buddy` 卡片现在按同一条显示名来源与已验证颜色来源保持一致
 - `~/.claude/pet` 不是当前官方 Buddy 视觉增强的主交付路径
 
 ## 产品规则

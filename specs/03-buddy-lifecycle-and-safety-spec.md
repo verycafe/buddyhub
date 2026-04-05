@@ -87,6 +87,7 @@ Patch apply must:
 - fail if the expected match count is wrong
 - avoid unrelated binary changes
 - apply only the supported subset of user settings
+- keep the bottom-right Buddy and the `/buddy` companion card aligned when a setting shares one native source
 
 Patch apply must not:
 
@@ -126,6 +127,7 @@ Restore must:
 - restore the saved Claude runtime config if BuddyHub changed the displayed Buddy name
 - preserve user data outside the patched target
 - leave Claude Code in a launchable state
+- restore both the bottom-right Buddy and the `/buddy` companion card to the original name/color source when those sources were modified
 
 Restore must not require the user to manually discover internal files first.
 

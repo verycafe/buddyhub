@@ -159,6 +159,17 @@ COLOR_PATCH_PRESETS: dict[str, dict[str, dict[str, Any]]] = {
     }
 }
 
+OFFICIAL_BUDDY_SURFACES: list[dict[str, str]] = [
+    {
+        "surface_id": "bottom_right_buddy",
+        "label": "Bottom-right Buddy",
+    },
+    {
+        "surface_id": "slash_buddy_card",
+        "label": "/buddy card",
+    },
+]
+
 DEFAULT_SETTINGS: dict[str, Any] = {
     "version": 1,
     "element_id": "tophat",
@@ -846,6 +857,27 @@ def sync_companion_name_override(
     return None
 
 
+def official_surface_sync_summary(
+    *,
+    companion_config: dict[str, Any],
+    effective_profile: dict[str, Any] | None,
+    applied_settings: dict[str, Any],
+) -> dict[str, Any]:
+    selected_color = applied_settings.get("color_id")
+    selected_nickname = normalize_nickname(applied_settings.get("nickname"))
+    color_patch = (effective_profile or {}).get("color_patch") or {}
+    color_sync = selected_color is None or bool(color_patch) or selected_color == "green"
+    nickname_sync = selected_nickname is None or bool(companion_config.get("available"))
+    return {
+        "surfaces": list(OFFICIAL_BUDDY_SURFACES),
+        "element_sync": bool(effective_profile),
+        "color_sync": color_sync,
+        "nickname_sync": nickname_sync,
+        "name_source": str(CLAUDE_JSON_FILE) if nickname_sync else None,
+        "color_source": "Claude Code native color tokens in the installed binary" if color_sync else None,
+    }
+
+
 def detect_native_target() -> dict[str, Any]:
     override = os.environ.get("BUDDYHUB_CLAUDE_BINARY")
     result: dict[str, Any] = {
@@ -1163,6 +1195,11 @@ def inspect_native_patch(*, create_manifest: bool = False) -> dict[str, Any]:
             color_id=customization["effective_settings"].get("color_id"),
         )
         selected_target_status = patch_profile_status(Path(detection["target_path"]), effective_profile)
+    surface_sync = official_surface_sync_summary(
+        companion_config=companion_config,
+        effective_profile=effective_profile,
+        applied_settings=customization["effective_settings"],
+    )
 
     current_profile = None
     if detection.get("target_detected") and detection.get("target_path"):
@@ -1201,6 +1238,7 @@ def inspect_native_patch(*, create_manifest: bool = False) -> dict[str, Any]:
         "effective_profile": effective_profile,
         "backup": backup,
         "patch_state": patch_state,
+        "surface_sync": surface_sync,
         "selected_target_status": selected_target_status,
         "current_profile": current_profile,
         "rehearsal_exists": rehearsal_exists,
@@ -1306,6 +1344,7 @@ def apply_rehearsal_patch() -> dict[str, Any]:
         "launch_check": launch_result,
         "manual_visual_check_required": True,
         "companion_name_patch": None,
+        "surface_sync": inspection.get("surface_sync"),
     }
 
 
@@ -1387,6 +1426,7 @@ def apply_installed_patch() -> dict[str, Any]:
             "manual_visual_check_required": False,
             "already_present": True,
             "companion_name_patch": companion_name_patch,
+            "surface_sync": inspection.get("surface_sync"),
         }
     target_restored_from_backup = False
     if target_status.get("status") in {"mixed", "patched"}:
@@ -1461,6 +1501,7 @@ def apply_installed_patch() -> dict[str, Any]:
         "launch_check": launch_result,
         "manual_visual_check_required": True,
         "companion_name_patch": companion_name_patch,
+        "surface_sync": inspection.get("surface_sync"),
     }
 
 
@@ -1512,5 +1553,6 @@ def restore_native_patch() -> dict[str, Any]:
         "backup_path": rehearsal.get("backup_path") or installed.get("backup_path"),
         "restored_target": restored_target,
         "restored_companion_name": restored_companion_name,
+        "restored_surfaces": [item["label"] for item in OFFICIAL_BUDDY_SURFACES],
         "restored_at": now_iso(),
     }

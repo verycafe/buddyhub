@@ -68,6 +68,11 @@ It must not replace the verified real Buddy `name`.
 
 BuddyHub targets the official native Buddy rendered by Claude Code in the bottom-right UI.
 
+For nickname and color behavior, BuddyHub must treat these official surfaces as synchronized:
+
+- the bottom-right Buddy
+- the `/buddy` companion card
+
 The visual source of truth is the Claude Code executable for the current installed version.
 
 On the current macOS machine, the validated example target file is:
@@ -158,6 +163,7 @@ On the current validated target:
 - `orange` is verified on `2.1.92` by remapping the current uncommon Buddy accent token from `success` to `warning`
 - `blue`, `pink`, `purple`, `red`, and `black` are verified on `2.1.92` by retinting the active success RGB token used by the current target
 - `white` remains unavailable until a real native patch point is verified
+- a verified color patch must be treated as applying to both the bottom-right Buddy and the `/buddy` companion card unless a target proves otherwise
 
 ## 10. Nickname Model
 
@@ -167,6 +173,7 @@ Nickname behavior must follow all of the following:
 2. On the current validated macOS target, BuddyHub may apply a reversible displayed-name override through `~/.claude.json` `companion.name`.
 3. Any nickname apply path must create a backup and restore the original name on `restore`.
 4. BuddyHub must not claim nickname support on other targets until the same runtime config path is verified there.
+5. When nickname is applied, the bottom-right Buddy label and the `/buddy` companion card name must stay in sync because they share the same companion name source.
 
 ## 11. Patch Rules
 

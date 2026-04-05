@@ -114,6 +114,7 @@ Verify:
 - the hook auto-applies supported element and `orange` settings
 - the hook leaves unsupported color settings pending
 - already-patched targets are detected cleanly and not patched again
+- the same saved nickname/color source remains consistent between the bottom-right Buddy and the `/buddy` companion card after restart
 
 ## 8. System Install Test
 
@@ -140,6 +141,7 @@ Verify:
 
 - Claude Code launches
 - the official Buddy visually changes as expected
+- the `/buddy` companion card shows the same verified displayed name and color source
 - the user is told to restart Claude Code after apply
 
 ### 8.4 Restore
@@ -148,6 +150,7 @@ Verify:
 
 - the original system binary is restored successfully
 - Claude Code returns to its original Buddy visuals
+- the `/buddy` companion card returns to the original name/color source as well
 
 ## 9. Failure Tests
 
@@ -177,6 +180,7 @@ Verify:
 - unverified color selections remain pending and do not silently become active
 - nickname restore returns the displayed name to the original Claude config value
 - BuddyHub does not silently claim unsupported settings are active
+- BuddyHub does not let the bottom-right Buddy and the `/buddy` companion card drift onto different nickname/color sources
 
 ### 9.5 Launch failure
 

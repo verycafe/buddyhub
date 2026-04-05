@@ -12,6 +12,7 @@ BuddyHub 是一个面向 Claude Code 官方 Buddy 的原生视觉定制工具。
 它的目标是：
 
 - 在不替换用户当前 Buddy 的前提下，为右下角官方 Buddy 增加可配置的视觉元素
+- 让右下角官方 Buddy 与 `/buddy` 卡片在颜色和显示名上保持一致
 - 让用户可以通过设置入口配置元素、颜色和昵称
 - 在安装或升级后自动应用当前配置，并明确提示用户重启 Claude Code 生效
 
@@ -31,11 +32,12 @@ BuddyHub 是一个面向 Claude Code 官方 Buddy 的原生视觉定制工具。
 3. 当前 macOS 机器上，Claude Code 主二进制位于：
    - `/Users/tvwoo/.local/share/claude/versions/2.1.92`
 4. 对主二进制副本做最小视觉补丁，能够改变右下角官方 Buddy 的原生视觉元素。
-5. `~/.claude/pet` 不是当前产品的主控制路径。
-6. 当前已稳定验证的真实 Buddy identity 来源是 transcript 中的 `companion_intro`，至少可读到：
+5. `/buddy` 卡片与右下角官方 Buddy 共享 companion 名称和官方颜色 token 渲染源。
+6. `~/.claude/pet` 不是当前产品的主控制路径。
+7. 当前已稳定验证的真实 Buddy identity 来源是 transcript 中的 `companion_intro`，至少可读到：
    - `name`
    - `species`
-7. 当前没有证据证明“已运行中的 Claude Code 进程”能热更新 Buddy 视觉；现阶段应按“补丁后重启生效”设计。
+8. 当前没有证据证明“已运行中的 Claude Code 进程”能热更新 Buddy 视觉；现阶段应按“补丁后重启生效”设计。
 
 ## 3. 问题定义
 
@@ -56,6 +58,7 @@ BuddyHub 是一个面向 Claude Code 官方 Buddy 的原生视觉定制工具。
 4. BuddyHub 必须支持安全备份、应用、恢复和卸载。
 5. BuddyHub 安装或升级后，应自动应用当前配置，并明确提示用户重启 Claude Code。
 6. BuddyHub 必须提供一个设置入口，用于配置元素、颜色和昵称，并提供预览。
+7. BuddyHub 对昵称和颜色的 apply/restore 必须同时覆盖右下角官方 Buddy 与 `/buddy` 卡片。
 
 ### 4.2 本阶段明确不做
 
@@ -88,6 +91,7 @@ BuddyHub 当前阶段只处理：
 - 面部附近的小型附加元素
 - 不改变主体身份的颜色增强
 - 不替换官方名字的昵称显示
+- `/buddy` 卡片与右下角官方 Buddy 的统一显示名和颜色同步
 
 BuddyHub 当前阶段不处理：
 
@@ -175,6 +179,7 @@ BuddyHub 当前阶段是一个 `官方 Buddy 原生视觉定制工具链`。
 3. 读取当前保存的设置
 4. 自动 apply 当前配置
 5. 明确提示用户重启 Claude Code 以看到正式生效结果
+6. 让右下角官方 Buddy 与 `/buddy` 卡片在颜色和显示名上同时生效
 
 ### 8.2 设置入口
 
@@ -188,6 +193,11 @@ BuddyHub 必须提供一个设置入口。
 - 查看预览
 - 应用当前设置
 - 恢复原始视觉
+
+设置入口必须明确说明：
+
+- 右下角官方 Buddy 与 `/buddy` 卡片共享同一套昵称与颜色设置
+- `restore` 会一起回退这两个官方表面
 
 设置入口本身是控制面，不是产品主 UI。产品主 UI 仍然是右下角官方 Buddy。
 

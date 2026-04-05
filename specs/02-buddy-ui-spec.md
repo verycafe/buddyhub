@@ -15,6 +15,11 @@ BuddyHub has only one primary product UI surface:
 
 This is the product surface.
 
+BuddyHub must also preserve consistency with the official `/buddy` companion card for:
+
+- displayed name
+- verified color presentation
+
 ## 3. What Counts As UI Success
 
 UI success means:
@@ -22,6 +27,7 @@ UI success means:
 - the user looks at the existing bottom-right official Buddy
 - the Buddy is visually different because BuddyHub enhanced its native elements
 - the change remains attached to the user's real Buddy identity
+- the `/buddy` companion card reflects the same verified nickname and color source
 
 UI success does not mean:
 

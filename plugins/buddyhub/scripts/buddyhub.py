@@ -302,6 +302,7 @@ def cmd_inspect(args: argparse.Namespace) -> int:
     customization = info["customization"]
     current_profile = info.get("current_profile") or {}
     selected_target_status = info.get("selected_target_status") or {}
+    surface_sync = info.get("surface_sync") or {}
     backup = info["backup"] or {}
     lines = [
         "# BuddyHub Inspect",
@@ -325,6 +326,16 @@ def cmd_inspect(args: argparse.Namespace) -> int:
         f"- Effective nickname on apply: `{customization['effective_settings'].get('nickname') or 'none'}`",
         f"- Selected target patch status: `{selected_target_status.get('status') or 'unknown'}`",
     ]
+    if surface_sync.get("surfaces"):
+        labels = ", ".join(item["label"] for item in surface_sync["surfaces"])
+        lines.append(f"- Synced official surfaces: `{labels}`")
+        lines.append(f"- Element sync across surfaces: `{str(bool(surface_sync.get('element_sync'))).lower()}`")
+        lines.append(f"- Color sync across surfaces: `{str(bool(surface_sync.get('color_sync'))).lower()}`")
+        lines.append(f"- Nickname sync across surfaces: `{str(bool(surface_sync.get('nickname_sync'))).lower()}`")
+    if surface_sync.get("name_source"):
+        lines.append(f"- Name sync source: `{surface_sync['name_source']}`")
+    if surface_sync.get("color_source"):
+        lines.append(f"- Color sync source: `{surface_sync['color_source']}`")
     if current_profile.get("profile_id"):
         lines.append(f"- Current installed Buddy element: `{current_profile.get('element_id')}`")
         lines.append(f"- Current installed profile id: `{current_profile.get('profile_id')}`")
@@ -381,6 +392,17 @@ def cmd_apply(args: argparse.Namespace) -> int:
         f"- Patched target sha1: `{result['patched_sha1']}`",
         f"- Launch verification: `{str(result['launch_check']['ok']).lower()}`",
     ]
+    surface_sync = result.get("surface_sync") or {}
+    if surface_sync.get("surfaces"):
+        labels = ", ".join(item["label"] for item in surface_sync["surfaces"])
+        lines.append(f"- Synced official surfaces: `{labels}`")
+        lines.append(f"- Element sync across surfaces: `{str(bool(surface_sync.get('element_sync'))).lower()}`")
+        lines.append(f"- Color sync across surfaces: `{str(bool(surface_sync.get('color_sync'))).lower()}`")
+        lines.append(f"- Nickname sync across surfaces: `{str(bool(surface_sync.get('nickname_sync'))).lower()}`")
+    if surface_sync.get("name_source"):
+        lines.append(f"- Name sync source: `{surface_sync['name_source']}`")
+    if surface_sync.get("color_source"):
+        lines.append(f"- Color sync source: `{surface_sync['color_source']}`")
     companion_name_patch = result.get("companion_name_patch") or {}
     if companion_name_patch:
         lines.append(f"- Displayed name sync: `{companion_name_patch.get('mode')}`")
@@ -434,9 +456,9 @@ def cmd_apply(args: argparse.Namespace) -> int:
                     else "- Restart Claude Code. The currently running process will not hot-reload this Buddy visual change."
                 ),
                 (
-                    "- After restart, verify the official bottom-right Buddy still matches the selected element."
+                    "- After restart, verify both the official bottom-right Buddy and the `/buddy` card still match the selected element, color, and displayed name."
                     if result.get("already_present")
-                    else "- After restart, visually verify the official bottom-right Buddy changed."
+                    else "- After restart, visually verify both the official bottom-right Buddy and the `/buddy` card changed."
                 ),
                 "- Use `/buddyhub:restore` if you want to roll the target back to the original binary.",
             ]
@@ -460,6 +482,8 @@ def cmd_restore(args: argparse.Namespace) -> int:
     ]
     if result.get("restored_companion_name"):
         lines.append(f"- Restored display name config: `{result['restored_companion_name']['config_path']}`")
+    if result.get("restored_surfaces"):
+        lines.append(f"- Restored official surfaces: `{', '.join(result['restored_surfaces'])}`")
     if result["removed_paths"]:
         lines.extend(
             [
@@ -489,6 +513,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     customization = payload["customization"]
     current_profile = payload.get("current_profile") or {}
     selected_target_status = payload.get("selected_target_status") or {}
+    surface_sync = payload.get("surface_sync") or {}
     rehearsal = (payload["patch_state"] or {}).get("rehearsal") or {}
     lines = [
         "# BuddyHub Doctor",
@@ -526,6 +551,16 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         f"- Work root: `{payload['work_root']}`",
         f"- Claude CLI available: `{str(shutil.which('claude') is not None).lower()}`",
     ]
+    if surface_sync.get("surfaces"):
+        labels = ", ".join(item["label"] for item in surface_sync["surfaces"])
+        lines.append(f"- Synced official surfaces: `{labels}`")
+        lines.append(f"- Element sync across surfaces: `{str(bool(surface_sync.get('element_sync'))).lower()}`")
+        lines.append(f"- Color sync across surfaces: `{str(bool(surface_sync.get('color_sync'))).lower()}`")
+        lines.append(f"- Nickname sync across surfaces: `{str(bool(surface_sync.get('nickname_sync'))).lower()}`")
+    if surface_sync.get("name_source"):
+        lines.append(f"- Name sync source: `{surface_sync['name_source']}`")
+    if surface_sync.get("color_source"):
+        lines.append(f"- Color sync source: `{surface_sync['color_source']}`")
     if detection.get("reason"):
         lines.append(f"- Detection note: {detection['reason']}")
     if rehearsal.get("launch_check_output"):
