@@ -16,6 +16,7 @@ Use this folder for:
 ## Current Files
 
 - [claude-code-buddy.md](/Users/tvwoo/Projects/buddyhub/research/claude-code-buddy.md): current working notes for Claude Code Buddy attributes, UI, state handling, and related evidence
+- [claude-code-settings-and-buddy-customization.md](/Users/tvwoo/Projects/buddyhub/research/claude-code-settings-and-buddy-customization.md): settings architecture notes and implementation lessons for official Buddy nickname, color, and element customization
 - [recon-reference.md](/Users/tvwoo/Projects/buddyhub/research/recon-reference.md): analysis of `gavraz/recon`, focused on mechanisms and patterns BuddyHub can learn from
 
 ## Suggested Conventions
@@ -23,6 +24,7 @@ Use this folder for:
 - Keep one topic per file when possible.
 - Prefer descriptive filenames such as:
   - `claude-code-buddy.md`
+  - `claude-code-settings-and-buddy-customization.md`
   - `recon-reference.md`
   - `plugin-distribution.md`
   - `ui-placement-notes.md`

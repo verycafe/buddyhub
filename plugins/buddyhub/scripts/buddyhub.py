@@ -96,6 +96,17 @@ def cmd_help(_: argparse.Namespace) -> int:
         "",
         "- `/buddyhub:help`",
         "- `/buddyhub:settings`",
+        "- `/buddyhub:color`",
+        "- `/buddyhub:color-green`",
+        "- `/buddyhub:color-orange`",
+        "- `/buddyhub:color-blue`",
+        "- `/buddyhub:color-pink`",
+        "- `/buddyhub:color-purple`",
+        "- `/buddyhub:color-red`",
+        "- `/buddyhub:color-black`",
+        "- `/buddyhub:clear-color`",
+        "- `/buddyhub:nickname <short-name>`",
+        "- `/buddyhub:clear-nickname`",
         "- `/buddyhub:inspect`",
         "- `/buddyhub:apply`",
         "- `/buddyhub:restore`",
@@ -137,12 +148,13 @@ def cmd_settings(args: argparse.Namespace) -> int:
     elif any(
         value is not None
         for value in (args.element, args.color, args.nickname)
-    ) or args.clear_nickname:
+    ) or args.clear_nickname or args.clear_color:
         settings = update_customization_settings(
             element_id=args.element,
             color_id=args.color,
             nickname=args.nickname,
             clear_nickname=args.clear_nickname,
+            clear_color=args.clear_color,
         )
     else:
         settings = load_customization_settings()
@@ -176,122 +188,55 @@ def cmd_settings(args: argparse.Namespace) -> int:
     lines = [
         "# BuddyHub Settings",
         "",
-        "## Verified Buddy",
+        "Slash-command settings menu for official Buddy color and nickname.",
         "",
-        f"- Name: `{identity.get('name') or 'unknown'}`",
-        f"- Species: `{identity.get('species') or 'unknown'}`",
-        f"- Identity source: `{identity.get('source') or 'unknown'}`",
-        f"- Current displayed name: `{companion_config.get('name') or 'unknown'}`",
-        f"- Name config path: `{companion_config.get('path')}`",
-        "",
-        "## Current selection",
-        "",
-        f"- Element: `{settings.get('element_id') or 'none'}`",
         f"- Color: `{settings.get('color_id') or 'none'}`",
         f"- Nickname: `{settings.get('nickname') or 'none'}`",
-        f"- Effective element on apply: `{effective_settings.get('element_id') or 'none'}`",
         f"- Effective color on apply: `{effective_settings.get('color_id') or 'none'}`",
         f"- Effective nickname on apply: `{effective_settings.get('nickname') or 'none'}`",
         "",
-        "## Apply status",
+        "Commands",
         "",
-        f"- Apply ready: `{str(customization.get('can_apply', False)).lower()}`",
-        f"- Active profile: `{(customization.get('profile') or {}).get('profile_id') or 'none'}`",
+        "- `/buddyhub:color`",
+        "- `/buddyhub:color-green`",
+        "- `/buddyhub:color-orange`",
+        "- `/buddyhub:color-blue`",
+        "- `/buddyhub:color-pink`",
+        "- `/buddyhub:color-purple`",
+        "- `/buddyhub:color-red`",
+        "- `/buddyhub:color-black`",
+        "- `/buddyhub:clear-color`",
+        "- `/buddyhub:nickname <short-name>`",
+        "- `/buddyhub:clear-nickname`",
+        "- `/buddyhub:inspect`",
+        "- `/buddyhub:apply`",
     ]
-    if current_profile.get("profile_id"):
-        lines.append(f"- Currently installed official Buddy element: `{current_profile.get('element_id')}`")
-        lines.append(f"- Installed profile: `{current_profile.get('profile_id')}`")
 
     blockers = customization.get("apply_blockers") or []
     if blockers:
-        lines.extend(["", "## Current blockers", "", *[f"- {blocker}" for blocker in blockers]])
+        lines.extend(["", "Current blockers", "", *[f"- {blocker}" for blocker in blockers]])
     warnings = customization.get("apply_warnings") or []
     if warnings:
-        lines.extend(["", "## Pending unsupported settings", "", *[f"- {warning}" for warning in warnings]])
+        lines.extend(["", "Pending unsupported settings", "", *[f"- {warning}" for warning in warnings]])
     if runtime_overrides.get("has_any_value"):
         lines.extend(
             [
                 "",
-                "## Native menu overrides",
+                "Native `/config` overrides",
                 "",
-                f"- Source: `{runtime_overrides.get('source') or 'unknown'}`",
-                f"- Element toggles enabled: `{', '.join(runtime_overrides.get('selected_elements') or []) or 'none'}`",
                 f"- Color toggles enabled: `{', '.join(runtime_overrides.get('selected_colors') or []) or 'none'}`",
                 f"- Nickname from native menu: `{runtime_overrides.get('nickname') or 'blank'}`",
             ]
         )
-
-    available_colors = [option for option in customization["color_options"] if option["available"]]
-
     lines.extend(
         [
             "",
-            "## Element catalog",
+            "Quick status",
             "",
-        ]
-    )
-    for option in customization["element_options"]:
-        lines.append(
-            f"- `{option['element_id']}` | {option['label']} | slot `{option['slot']}` | "
-            f"available `{str(option['available']).lower()}` | selected `{str(option['selected']).lower()}`"
-        )
-        lines.append(f"  {option['description']}")
-        lines.append(f"  Note: {option['reason']}")
-
-    lines.extend(["", "## Color presets", ""])
-    if available_colors:
-        for option in customization["color_options"]:
-            lines.append(
-                f"- `{option['color_id']}` | {option['label']} `{option['hex']}` | "
-                f"available `{str(option['available']).lower()}` | selected `{str(option['selected']).lower()}`"
-            )
-            lines.append(f"  Note: {option['reason']}")
-    else:
-        lines.append("- No verified color presets are available for the current Buddy and Claude version yet.")
-
-    lines.extend(
-        [
-            "",
-            "## Nickname",
-            "",
-        f"- Supported on current target: `{str(customization['nickname_supported']).lower()}`",
-        f"- Note: {customization['nickname_reason']}",
-        ]
-    )
-
-    selected_element = customization["selected_element"]
-    selected_color = customization["selected_color"]
-    lines.extend(
-        [
-            "",
-            "## Preview",
-            "",
-            f"- Base Buddy: `{identity.get('name') or 'unknown'} / {identity.get('species') or 'unknown'}`",
-            f"- Additive element: `{selected_element['label']}` on slot `{selected_element['slot']}`",
-            f"- Element placement note: {selected_element['description']}",
-            (
-                f"- Color preview: `{selected_color['label']}`"
-                if selected_color and effective_settings.get('color_id')
-                else "- Color preview: `unavailable on current target`"
-            ),
-            (
-                f"- Nickname preview: `{effective_settings.get('nickname')}`"
-                if effective_settings.get('nickname')
-                else "- Nickname preview: `unavailable on current target`"
-            ),
-            "- This preview is advisory. The official Buddy still requires `/buddyhub:apply` and a Claude Code restart.",
-        ]
-    )
-    if preview_lines:
-        lines.extend(["", "```text", *preview_lines, "```"])
-    lines.extend(
-        [
-            "",
-            "## Quick commands",
-            "",
-            "- `/buddyhub:settings`",
-            "- `/config`",
-            "- `/buddyhub:apply`",
+            f"- Verified Buddy: `{identity.get('name') or 'unknown'} / {identity.get('species') or 'unknown'}`",
+            f"- Current displayed name: `{companion_config.get('name') or 'unknown'}`",
+            f"- Apply ready: `{str(customization.get('can_apply', False)).lower()}`",
+            "- Use `/buddyhub:inspect` for full diagnostics and preview details.",
         ]
     )
     print("\n".join(lines))
@@ -756,6 +701,7 @@ def build_parser() -> argparse.ArgumentParser:
     settings_parser.add_argument("--element", choices=sorted(ELEMENT_CATALOG.keys()))
     settings_parser.add_argument("--color", choices=sorted(COLOR_PRESETS.keys()))
     settings_parser.add_argument("--nickname")
+    settings_parser.add_argument("--clear-color", action="store_true")
     settings_parser.add_argument("--clear-nickname", action="store_true")
     settings_parser.add_argument("--reset", action="store_true")
     settings_parser.add_argument("--json", action="store_true")

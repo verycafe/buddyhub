@@ -1,25 +1,38 @@
 ---
-description: Open BuddyHub native settings guidance
+description: Show the BuddyHub settings menu
 disable-model-invocation: true
 ---
 
 # BuddyHub Settings
 
-BuddyHub settings now live in Claude Code's native config menu.
+Use Claude Code's slash-command autocomplete as the BuddyHub settings menu.
 
-## Native Menu
+## Color
 
-1. Run `/config`
-2. Search for `BuddyHub`
-3. Configure:
-   - at most one Color toggle
-   - optional Nickname
-4. Run `/buddyhub:apply`
-5. Restart Claude Code
+- `/buddyhub:color`
+- `/buddyhub:color-green`
+- `/buddyhub:color-orange`
+- `/buddyhub:color-blue`
+- `/buddyhub:color-pink`
+- `/buddyhub:color-purple`
+- `/buddyhub:color-red`
+- `/buddyhub:color-black`
+- `/buddyhub:clear-color`
+
+## Nickname
+
+- `/buddyhub:nickname <short-name>`
+- `/buddyhub:clear-nickname`
+
+## Apply And Verify
+
+- `/buddyhub:inspect`
+- `/buddyhub:apply`
+- `/buddyhub:restore`
 
 ## Notes
 
-- `/buddyhub:settings` is now a fast help/menu entry and does not run a long inspection script.
-- The current release exposes only Color and Nickname in the native menu.
-- Element switching is hidden in this version.
-- Use `/buddyhub:inspect` to see the current saved settings, native menu overrides, effective settings, and blockers.
+- This command is a fast menu entry and does not run a long inspection script.
+- Color and Nickname are the public settings in this release.
+- Element switching remains hidden in this release.
+- Use slash-command autocomplete to choose the specific color command quickly.

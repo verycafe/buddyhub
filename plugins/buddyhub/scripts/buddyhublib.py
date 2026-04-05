@@ -494,6 +494,7 @@ def update_customization_settings(
     element_id: str | None = None,
     color_id: str | None = None,
     nickname: str | None = None,
+    clear_color: bool = False,
     clear_nickname: bool = False,
     reset: bool = False,
 ) -> dict[str, Any]:
@@ -506,6 +507,8 @@ def update_customization_settings(
         if color_id not in COLOR_PRESETS:
             raise RuntimeError(f"Unknown color_id: {color_id}")
         settings["color_id"] = color_id
+    if clear_color:
+        settings["color_id"] = None
     if nickname is not None:
         settings["nickname"] = normalize_nickname(nickname)
     if clear_nickname:
