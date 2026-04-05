@@ -20,6 +20,17 @@ npm install -g github:verycafe/buddyhub
 buddyhub
 ```
 
+首次启动时，如果系统语言可以被可靠识别，BuddyHub 会默认使用系统语言作为菜单语言。
+
+## 平台探测
+
+- macOS：当前已经验证的自动探测路径
+- Linux 和 Windows：如果自动探测不完整，BuddyHub 会先进入 `Setup`，引导用户手动填写：
+  - Claude 可执行文件路径
+  - Claude 配置文件路径
+
+这些覆盖路径会保存在 BuddyHub 自己的设置里，后续启动会继续复用。
+
 ## 菜单
 
 当前一级菜单：

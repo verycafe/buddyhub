@@ -11,6 +11,8 @@ This document defines the real test path for BuddyHub's current phase.
 The purpose is to verify that:
 
 - BuddyHub can read the real installed Claude Code Buddy state on the local machine
+- BuddyHub falls back to a guided `Setup` screen when automatic file detection is incomplete
+- BuddyHub defaults to the system language on first launch when a supported locale is available
 - the standalone TUI menu can switch language, color, and nickname draft values
 - the preview is based on the installed Buddy plus saved draft settings
 - hidden element state is preserved exactly as installed, or stays `none` on a clean Buddy
@@ -49,7 +51,32 @@ For non-interactive verification helpers:
 /Users/tvwoo/Projects/buddyhub/buddyhub --dump-state
 ```
 
-## 4. Safe Test Order
+## 4. Setup Fallback Test
+
+When BuddyHub cannot fully detect Claude Code paths, it should enter `Setup` automatically.
+
+Verify:
+
+- BuddyHub starts in `Setup`
+- the setup menu lets the user choose:
+  - `Claude binary path`
+  - `Claude config path`
+  - `Retry detection`
+  - `Continue`
+  - `Quit`
+- saving a valid binary path and config path allows BuddyHub to re-run detection
+- the saved override paths are reused on the next launch
+
+## 5. System-Language Default Test
+
+On first launch with no saved BuddyHub settings, verify:
+
+- supported locales such as `de_DE.UTF-8` default to `de`
+- supported locales such as `zh_CN.UTF-8` default to `zh_cn`
+- generic shell locales such as `C`, `C.UTF-8`, or `POSIX` do not override a real language setting from `LANG`
+- after the first launch, an explicitly saved language still wins over automatic detection
+
+## 6. Safe Test Order
 
 The required order is:
 
@@ -66,7 +93,7 @@ The required order is:
 11. verify the standalone TUI result card appears for apply and restore
 12. verify `Uninstall` restores, removes old plugin traces, and exits automatically
 
-## 5. Installed-State Detection Test
+## 7. Installed-State Detection Test
 
 Before interacting with the menu, verify BuddyHub can read the real installed Buddy:
 
@@ -83,7 +110,7 @@ Verify:
 - `draft_visual` starts from the installed state and only adds saved draft changes
 - if the Buddy has no installed element, `draft_visual.element_id` stays `null` and does not silently fall back to `tophat`
 
-## 6. Language Menu Test
+## 8. Language Menu Test
 
 Launch the TUI and enter the `Language` menu.
 
@@ -110,7 +137,7 @@ Validated language IDs:
 - `fr`
 - `ru`
 
-## 7. Color Menu Test
+## 9. Color Menu Test
 
 Enter the `Color` menu.
 
@@ -147,7 +174,7 @@ When `white` is selected, verify:
 - the saved color does not change silently
 - the status message clearly indicates that the color is unavailable
 
-## 8. Nickname Test
+## 10. Nickname Test
 
 Enter the `Nickname` screen.
 
@@ -159,7 +186,7 @@ Verify:
 - the installed preview remains unchanged until apply
 - clearing the nickname returns the draft preview to the installed Buddy name
 
-## 9. Apply Test
+## 11. Apply Test
 
 After selecting a verified color or nickname:
 
@@ -176,7 +203,7 @@ Verify:
 - the Buddy color matches the saved verified preset
 - the `/buddy` companion card shows the same name and color source after restart
 
-## 10. Restore Test
+## 12. Restore Test
 
 From the standalone TUI, choose `Restore`.
 
@@ -194,7 +221,7 @@ Verify:
 - the original binary patch state is restored
 - the `/buddy` companion card returns to the original name/color source as well
 
-## 11. Uninstall Test
+## 13. Uninstall Test
 
 From the standalone TUI, choose `Uninstall`.
 
@@ -206,16 +233,16 @@ Verify:
 - BuddyHub exits on its own without asking the user to run a separate uninstall command
 - if BuddyHub was installed through a package manager, the background uninstall job is scheduled automatically
 
-## 12. Failure Tests
+## 14. Failure Tests
 
-### 12.1 Unsupported color
+### 14.1 Unsupported color
 
 Verify:
 
 - selecting `white` does not silently become active
 - BuddyHub reports the color as unavailable
 
-### 12.2 Apply on already-matching state
+### 14.2 Apply on already-matching state
 
 Verify:
 

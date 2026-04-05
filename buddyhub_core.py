@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import locale
 import os
 import shlex
 import shutil
@@ -195,6 +196,8 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "color_id": None,
     "nickname": None,
     "language_id": "en",
+    "claude_binary_path": None,
+    "claude_json_path": None,
     "updated_at": None,
 }
 
@@ -593,7 +596,9 @@ def ensure_ownership_manifest() -> dict[str, Any]:
 
 
 def default_customization_settings() -> dict[str, Any]:
-    return dict(DEFAULT_SETTINGS)
+    settings = dict(DEFAULT_SETTINGS)
+    settings["language_id"] = detect_system_language_id()
+    return settings
 
 
 def normalize_nickname(value: str | None) -> str | None:
@@ -601,6 +606,49 @@ def normalize_nickname(value: str | None) -> str | None:
         return None
     cleaned = value.strip()
     return cleaned or None
+
+
+def normalize_optional_path(value: str | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = str(value).strip()
+    if not cleaned:
+        return None
+    return str(Path(cleaned).expanduser())
+
+
+def is_generic_locale(value: str | None) -> bool:
+    if not value:
+        return True
+    normalized = str(value).strip().split(".")[0].split("@")[0].replace("-", "_").lower()
+    return normalized in {"c", "posix"}
+
+
+def detect_system_language_id() -> str:
+    candidates = [
+        os.environ.get("LC_ALL"),
+        os.environ.get("LC_MESSAGES"),
+        os.environ.get("LANGUAGE"),
+        os.environ.get("LANG"),
+        locale.getlocale()[0],
+    ]
+    normalized = ""
+    for candidate in candidates:
+        if candidate and not is_generic_locale(candidate):
+            normalized = str(candidate)
+            break
+    normalized = normalized.split(".")[0].split("@")[0].replace("-", "_").lower()
+    if normalized.startswith("zh"):
+        return "zh_cn"
+    if normalized.startswith("ja"):
+        return "ja"
+    if normalized.startswith("de"):
+        return "de"
+    if normalized.startswith("fr"):
+        return "fr"
+    if normalized.startswith("ru"):
+        return "ru"
+    return "en"
 
 
 def sanitize_customization_settings(raw: dict[str, Any] | None) -> dict[str, Any]:
@@ -618,12 +666,17 @@ def sanitize_customization_settings(raw: dict[str, Any] | None) -> dict[str, Any
 
     language_id = settings.get("language_id")
     if language_id not in LANGUAGE_PRESETS:
-        language_id = DEFAULT_SETTINGS["language_id"]
+        language_id = detect_system_language_id()
+
+    claude_binary_path = normalize_optional_path(settings.get("claude_binary_path"))
+    claude_json_path = normalize_optional_path(settings.get("claude_json_path"))
 
     settings["element_id"] = element_id
     settings["color_id"] = color_id
     settings["nickname"] = normalize_nickname(settings.get("nickname"))
     settings["language_id"] = language_id
+    settings["claude_binary_path"] = claude_binary_path
+    settings["claude_json_path"] = claude_json_path
     settings["version"] = DEFAULT_SETTINGS["version"]
     return settings
 
@@ -646,9 +699,13 @@ def update_customization_settings(
     color_id: str | None = None,
     nickname: str | None = None,
     language_id: str | None = None,
+    claude_binary_path: str | None = None,
+    claude_json_path: str | None = None,
     clear_element: bool = False,
     clear_color: bool = False,
     clear_nickname: bool = False,
+    clear_claude_binary_path: bool = False,
+    clear_claude_json_path: bool = False,
     reset: bool = False,
 ) -> dict[str, Any]:
     settings = default_customization_settings() if reset else load_customization_settings()
@@ -664,6 +721,10 @@ def update_customization_settings(
         if language_id not in LANGUAGE_PRESETS:
             raise RuntimeError(f"Unknown language_id: {language_id}")
         settings["language_id"] = language_id
+    if claude_binary_path is not None:
+        settings["claude_binary_path"] = normalize_optional_path(claude_binary_path)
+    if claude_json_path is not None:
+        settings["claude_json_path"] = normalize_optional_path(claude_json_path)
     if clear_element:
         settings["element_id"] = None
     if clear_color:
@@ -672,6 +733,10 @@ def update_customization_settings(
         settings["nickname"] = normalize_nickname(nickname)
     if clear_nickname:
         settings["nickname"] = None
+    if clear_claude_binary_path:
+        settings["claude_binary_path"] = None
+    if clear_claude_json_path:
+        settings["claude_json_path"] = None
     return save_customization_settings(settings)
 
 
@@ -893,8 +958,10 @@ def empty_identity() -> dict[str, Any]:
     }
 
 
-def read_companion_config() -> dict[str, Any]:
-    path = CLAUDE_JSON_FILE
+def read_companion_config(settings: dict[str, Any] | None = None) -> dict[str, Any]:
+    override = normalize_optional_path(os.environ.get("BUDDYHUB_CLAUDE_JSON"))
+    configured = normalize_optional_path((settings or {}).get("claude_json_path"))
+    path = Path(override or configured or str(CLAUDE_JSON_FILE))
     result = {
         "path": str(path),
         "exists": path.exists(),
@@ -1104,8 +1171,9 @@ def official_surface_sync_summary(
     }
 
 
-def detect_native_target() -> dict[str, Any]:
-    override = os.environ.get("BUDDYHUB_CLAUDE_BINARY")
+def detect_native_target(settings: dict[str, Any] | None = None) -> dict[str, Any]:
+    override = normalize_optional_path(os.environ.get("BUDDYHUB_CLAUDE_BINARY"))
+    configured = normalize_optional_path((settings or {}).get("claude_binary_path"))
     result: dict[str, Any] = {
         "platform": sys.platform,
         "target_detected": False,
@@ -1121,9 +1189,9 @@ def detect_native_target() -> dict[str, Any]:
         "reason": None,
     }
 
-    if override:
-        candidate = Path(override).expanduser()
-        result["detection_mode"] = "env"
+    if override or configured:
+        candidate = Path(override or configured).expanduser()
+        result["detection_mode"] = "env" if override else "settings"
         if candidate.exists() and candidate.is_file():
             version = candidate.name
             profiles = profiles_for_version(version)
@@ -1142,11 +1210,15 @@ def detect_native_target() -> dict[str, Any]:
                 }
             )
             return result
-        result["reason"] = "BUDDYHUB_CLAUDE_BINARY does not point to a readable file."
+        result["reason"] = (
+            "Configured Claude binary path does not point to a readable file."
+            if configured and not override
+            else "BUDDYHUB_CLAUDE_BINARY does not point to a readable file."
+        )
         return result
 
     if sys.platform != "darwin":
-        result["reason"] = "Automatic native-target detection is currently validated only on macOS."
+        result["reason"] = "Automatic native-target detection is currently validated only on macOS. Use Setup to enter the Claude binary path on this platform."
         return result
 
     result["install_root"] = str(CLAUDE_VERSIONS_ROOT)
@@ -1460,10 +1532,10 @@ def restore_binary_from_backup(target_path: Path, backup_path: Path) -> dict[str
 def inspect_native_patch(*, create_manifest: bool = False) -> dict[str, Any]:
     if create_manifest:
         ensure_ownership_manifest()
-    detection = detect_native_target()
-    identity = current_identity_from_projects()
-    companion_config = read_companion_config()
     saved_settings = load_customization_settings()
+    detection = detect_native_target(saved_settings)
+    identity = current_identity_from_projects()
+    companion_config = read_companion_config(saved_settings)
     settings = dict(saved_settings)
     patch_state = load_native_patch_state()
     customization = customization_support(

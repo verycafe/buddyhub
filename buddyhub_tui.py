@@ -14,6 +14,7 @@ from buddyhub_core import (
     cleanup_legacy_plugin_traces,
     inspect_native_patch,
     load_customization_settings,
+    normalize_optional_path,
     preview_lines_for_customization,
     restore_native_patch,
     schedule_self_uninstall,
@@ -36,6 +37,9 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "screen_language": "Language Menu",
         "screen_color": "Color Menu",
         "screen_nickname": "Nickname Input",
+        "screen_setup": "Setup",
+        "screen_binary_path": "Claude Binary Path",
+        "screen_config_path": "Claude Config Path",
         "preview": "Preview",
         "buddy_identity": "Buddy",
         "display_name": "Display name",
@@ -103,6 +107,28 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "detail_color_reason": "Reason",
         "detail_language_hint": "The menu language changes immediately after selection.",
         "detail_nickname_hint": "Press Enter to save the nickname draft, then Apply from the main menu.",
+        "help_setup": "Up/Down: move  Enter: select  q: quit",
+        "setup_intro": "BuddyHub could not fully detect your Claude Code installation. Use the setup menu to guide it.",
+        "setup_binary": "Claude binary path",
+        "setup_config": "Claude config path",
+        "setup_retry": "Retry detection",
+        "setup_continue": "Continue",
+        "setup_quit": "Quit",
+        "setup_found": "found",
+        "setup_missing": "missing",
+        "setup_reason": "Reason",
+        "setup_current_path": "Detected path",
+        "setup_saved_path": "Saved override",
+        "setup_binary_prompt": "Enter the Claude executable path (leave blank to clear):",
+        "setup_config_prompt": "Enter the Claude config path (leave blank to clear):",
+        "saved_binary_path": "Claude binary path saved.",
+        "saved_config_path": "Claude config path saved.",
+        "cleared_binary_path": "Claude binary path cleared.",
+        "cleared_config_path": "Claude config path cleared.",
+        "detail_setup": "BuddyHub needs help locating Claude Code files on this machine.",
+        "detail_setup_retry": "Retry automatic detection after saving or adjusting paths.",
+        "detail_setup_continue": "Continue into the main menu even if some detection is still missing.",
+        "detail_path_input": "Type a filesystem path. Enter saves it. Esc cancels.",
         "result_apply_title": "Apply Result",
         "result_restore_title": "Restore Result",
         "result_uninstall_title": "Uninstall Result",
@@ -129,6 +155,9 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "screen_language": "语言菜单",
         "screen_color": "颜色菜单",
         "screen_nickname": "昵称输入",
+        "screen_setup": "设置",
+        "screen_binary_path": "Claude 二进制路径",
+        "screen_config_path": "Claude 配置路径",
         "preview": "预览",
         "buddy_identity": "Buddy",
         "display_name": "显示名称",
@@ -196,6 +225,28 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "detail_color_reason": "原因",
         "detail_language_hint": "选择后菜单语言会立刻切换。",
         "detail_nickname_hint": "回车保存昵称草稿，然后回主菜单应用。",
+        "help_setup": "上下键：移动  回车：选择  q：退出",
+        "setup_intro": "BuddyHub 没有完整探测到当前机器上的 Claude Code，请先在设置里补全路径。",
+        "setup_binary": "Claude 二进制路径",
+        "setup_config": "Claude 配置路径",
+        "setup_retry": "重新探测",
+        "setup_continue": "继续",
+        "setup_quit": "退出",
+        "setup_found": "已找到",
+        "setup_missing": "缺失",
+        "setup_reason": "原因",
+        "setup_current_path": "检测到的路径",
+        "setup_saved_path": "已保存覆盖",
+        "setup_binary_prompt": "输入 Claude 可执行文件路径（留空则清除）：",
+        "setup_config_prompt": "输入 Claude 配置文件路径（留空则清除）：",
+        "saved_binary_path": "Claude 二进制路径已保存。",
+        "saved_config_path": "Claude 配置路径已保存。",
+        "cleared_binary_path": "Claude 二进制路径已清除。",
+        "cleared_config_path": "Claude 配置路径已清除。",
+        "detail_setup": "BuddyHub 需要你帮助定位这台机器上的 Claude Code 文件。",
+        "detail_setup_retry": "保存或调整路径后，重新执行自动探测。",
+        "detail_setup_continue": "即使还有缺失，也先进入主菜单。",
+        "detail_path_input": "输入文件路径，回车保存，Esc 取消。",
         "result_apply_title": "应用结果",
         "result_restore_title": "恢复结果",
         "result_uninstall_title": "卸载结果",
@@ -570,6 +621,7 @@ for _language_id, _pack in LANGUAGE_PACKS.items():
 LANGUAGE_ORDER = ["zh_cn", "en", "ja", "zh_hans", "de", "fr", "ru"]
 TOP_LEVEL_MENU = ["language", "color", "nickname", "apply", "restore", "uninstall", "quit"]
 VISIBLE_ELEMENT_CONTROLS = False
+SETUP_MENU = ["binary", "config", "retry", "continue", "quit"]
 
 
 class BuddyHubTUI:
@@ -579,11 +631,13 @@ class BuddyHubTUI:
             "main": 0,
             "language": 0,
             "color": 0,
+            "setup": 0,
         }
         self.message = ""
         self.result_card: dict[str, Any] | None = None
         self.exit_notice: str | None = None
         self.nickname_buffer = ""
+        self.path_buffer = ""
         self.running = True
         self.settings = load_customization_settings()
         self.lang = str(self.settings.get("language_id") or "en")
@@ -592,6 +646,9 @@ class BuddyHubTUI:
         self.sync_hidden_element_setting()
         self.draft_visual = self.build_draft_visual()
         self.color_pairs_ready = False
+        if self.needs_setup():
+            self.screen = "setup"
+            self.message = self.setup_intro_message()
 
     def strings(self) -> dict[str, str]:
         return LANGUAGE_PACKS.get(self.lang, LANGUAGE_PACKS["en"])
@@ -606,6 +663,29 @@ class BuddyHubTUI:
         self.current_visual = self.inspection.get("current_visual") or {}
         self.sync_hidden_element_setting()
         self.draft_visual = self.build_draft_visual()
+
+    def needs_setup(self) -> bool:
+        detection = self.inspection.get("detection") or {}
+        companion = self.inspection.get("companion_config") or {}
+        return (not detection.get("target_detected")) or (not companion.get("exists"))
+
+    def setup_intro_message(self) -> str:
+        detection = self.inspection.get("detection") or {}
+        companion = self.inspection.get("companion_config") or {}
+        reasons = [str(detection.get("reason") or "").strip(), str(companion.get("reason") or "").strip()]
+        for reason in reasons:
+            if reason:
+                return reason
+        return self.tr("setup_intro")
+
+    def setup_menu_items(self) -> list[tuple[str, str]]:
+        return [
+            ("binary", self.tr("setup_binary")),
+            ("config", self.tr("setup_config")),
+            ("retry", self.tr("setup_retry")),
+            ("continue", self.tr("setup_continue")),
+            ("quit", self.tr("setup_quit")),
+        ]
 
     def build_draft_visual(self) -> dict[str, Any]:
         customization = self.inspection.get("customization") or {}
@@ -784,6 +864,41 @@ class BuddyHubTUI:
 
     def menu_detail_lines(self, width: int) -> list[str]:
         width = max(12, width)
+        if self.screen == "setup":
+            item_id = SETUP_MENU[self.selection["setup"]]
+            detection = self.inspection.get("detection") or {}
+            companion = self.inspection.get("companion_config") or {}
+            if item_id == "binary":
+                lines = [self.tr("detail_setup")[:width]]
+                status = self.tr("setup_found") if detection.get("target_detected") else self.tr("setup_missing")
+                lines.append(f"{self.tr('detail_color_status')}: {status}"[:width])
+                if detection.get("target_path"):
+                    lines.append(f"{self.tr('setup_current_path')}: {detection.get('target_path')}"[:width])
+                saved = self.settings.get("claude_binary_path")
+                if saved:
+                    lines.append(f"{self.tr('setup_saved_path')}: {saved}"[:width])
+                reason = str(detection.get("reason") or "").strip()
+                if reason:
+                    lines.append(f"{self.tr('setup_reason')}: {reason}"[:width])
+                return lines
+            if item_id == "config":
+                lines = [self.tr("detail_setup")[:width]]
+                status = self.tr("setup_found") if companion.get("exists") else self.tr("setup_missing")
+                lines.append(f"{self.tr('detail_color_status')}: {status}"[:width])
+                if companion.get("path"):
+                    lines.append(f"{self.tr('setup_current_path')}: {companion.get('path')}"[:width])
+                saved = self.settings.get("claude_json_path")
+                if saved:
+                    lines.append(f"{self.tr('setup_saved_path')}: {saved}"[:width])
+                reason = str(companion.get("reason") or "").strip()
+                if reason:
+                    lines.append(f"{self.tr('setup_reason')}: {reason}"[:width])
+                return lines
+            if item_id == "retry":
+                return [self.tr("detail_setup_retry")[:width]]
+            if item_id == "continue":
+                return [self.tr("detail_setup_continue")[:width]]
+            return [self.tr("detail_quit")[:width]]
         if self.screen == "main":
             item_id = TOP_LEVEL_MENU[self.selection["main"]]
             if item_id == "language":
@@ -844,6 +959,8 @@ class BuddyHubTUI:
             return lines
         if self.screen == "nickname":
             return [self.tr("detail_nickname_hint")[:width]]
+        if self.screen in {"setup_binary_input", "setup_config_input"}:
+            return [self.tr("detail_path_input")[:width]]
         return []
 
     def show_result(
@@ -1035,6 +1152,8 @@ class BuddyHubTUI:
             self.show_result("result_error_title", "error", detail)
 
     def submenu_count(self, screen: str) -> int:
+        if screen == "setup":
+            return len(SETUP_MENU)
         if screen == "language":
             return len(LANGUAGE_ORDER)
         if screen == "color":
@@ -1071,9 +1190,12 @@ class BuddyHubTUI:
 
         help_text = {
             "main": self.tr("help_main"),
+            "setup": self.tr("help_setup"),
             "language": self.tr("help_submenu"),
             "color": self.tr("help_submenu"),
             "nickname": self.tr("help_input"),
+            "setup_binary_input": self.tr("help_input"),
+            "setup_config_input": self.tr("help_input"),
             "result": self.tr("help_result"),
         }.get(self.screen, self.tr("help_main"))
         message = self.message or self.tr("restart_note")
@@ -1148,14 +1270,23 @@ class BuddyHubTUI:
         inner_width = max(8, width - 4)
         section_title = {
             "main": self.tr("menu_header"),
+            "setup": self.tr("screen_setup"),
             "language": self.tr("screen_language"),
             "color": self.tr("screen_color"),
             "nickname": self.tr("screen_nickname"),
+            "setup_binary_input": self.tr("screen_binary_path"),
+            "setup_config_input": self.tr("screen_config_path"),
         }.get(self.screen, self.tr("menu_header"))
         self.safe_addstr(stdscr, start_y + 1, inner_x, section_title, curses.A_BOLD)
         self.safe_hline(stdscr, start_y + 2, start_x + 1, max(6, width - 2))
         lines: list[tuple[str, bool, int]] = []
-        if self.screen == "main":
+        if self.screen == "setup":
+            self.safe_addstr(stdscr, start_y + 3, inner_x, self.tr("setup_intro")[:inner_width], curses.A_DIM)
+            selected = self.selection["setup"]
+            for index, (_, label) in enumerate(self.setup_menu_items()):
+                marker = "›" if index == selected else " "
+                lines.append((f"{marker} {label}", index == selected, 0))
+        elif self.screen == "main":
             selected = self.selection["main"]
             for index, item_id in enumerate(TOP_LEVEL_MENU):
                 label = self.top_level_label(item_id)
@@ -1219,6 +1350,23 @@ class BuddyHubTUI:
             if not buffer:
                 buffer = self.settings.get("nickname") or ""
             lines.append((f"› {self.tr('nickname_input')}: {buffer or '…'}", True, 0))
+        elif self.screen in {"setup_binary_input", "setup_config_input"}:
+            path_key = "claude_binary_path" if self.screen == "setup_binary_input" else "claude_json_path"
+            prompt_key = "setup_binary_prompt" if self.screen == "setup_binary_input" else "setup_config_prompt"
+            detected_path = (
+                (self.inspection.get("detection") or {}).get("target_path")
+                if self.screen == "setup_binary_input"
+                else (self.inspection.get("companion_config") or {}).get("path")
+            )
+            saved_path = self.settings.get(path_key)
+            lines.append((self.tr(prompt_key), False, 0))
+            lines.append(("", False, 0))
+            if detected_path:
+                lines.append((f"{self.tr('setup_current_path')}: {detected_path}", False, curses.A_DIM))
+            if saved_path:
+                lines.append((f"{self.tr('setup_saved_path')}: {saved_path}", False, curses.A_DIM))
+            lines.append(("", False, 0))
+            lines.append((f"› {self.tr('nickname_input')}: {self.path_buffer or '…'}", True, 0))
 
         detail_lines = self.menu_detail_lines(inner_width)
         detail_block_height = (len(detail_lines) + 2) if detail_lines else 0
@@ -1363,6 +1511,9 @@ class BuddyHubTUI:
         if self.screen == "nickname":
             self.handle_nickname_key(key)
             return
+        if self.screen in {"setup_binary_input", "setup_config_input"}:
+            self.handle_path_key(key)
+            return
         if self.screen == "result":
             if key in ("q", "Q", 27, curses.KEY_ENTER, 10, 13):
                 self.screen = "main"
@@ -1372,8 +1523,10 @@ class BuddyHubTUI:
         if key in ("q", "Q", 27):
             if self.screen == "main":
                 self.running = False
+            elif self.screen == "setup":
+                self.running = False
             else:
-                self.screen = "main"
+                self.screen = "setup" if self.screen in {"setup_binary_input", "setup_config_input"} else "main"
             return
 
         if key == curses.KEY_UP:
@@ -1419,6 +1572,26 @@ class BuddyHubTUI:
                 self.running = False
             return
 
+        if self.screen == "setup":
+            item_id = SETUP_MENU[self.selection["setup"]]
+            if item_id == "binary":
+                self.screen = "setup_binary_input"
+                self.path_buffer = str(self.settings.get("claude_binary_path") or "")
+            elif item_id == "config":
+                self.screen = "setup_config_input"
+                self.path_buffer = str(self.settings.get("claude_json_path") or "")
+            elif item_id == "retry":
+                self.refresh()
+                self.message = self.setup_intro_message()
+                if not self.needs_setup():
+                    self.screen = "main"
+            elif item_id == "continue":
+                self.screen = "main"
+                self.message = self.setup_intro_message()
+            elif item_id == "quit":
+                self.running = False
+            return
+
         if self.screen == "language":
             self.save_language(LANGUAGE_ORDER[self.selection["language"]])
             self.screen = "main"
@@ -1447,6 +1620,37 @@ class BuddyHubTUI:
             return
         if isinstance(key, str) and key not in ("\n", "\r", "\t"):
             self.nickname_buffer += key
+
+    def handle_path_key(self, key: Any) -> None:
+        if key == 27:
+            self.screen = "setup"
+            self.path_buffer = ""
+            return
+        if key in (curses.KEY_ENTER, 10, 13):
+            value = normalize_optional_path(self.path_buffer)
+            if self.screen == "setup_binary_input":
+                if value:
+                    update_customization_settings(claude_binary_path=value)
+                    self.set_message(self.tr("saved_binary_path"))
+                else:
+                    update_customization_settings(clear_claude_binary_path=True)
+                    self.set_message(self.tr("cleared_binary_path"))
+            else:
+                if value:
+                    update_customization_settings(claude_json_path=value)
+                    self.set_message(self.tr("saved_config_path"))
+                else:
+                    update_customization_settings(clear_claude_json_path=True)
+                    self.set_message(self.tr("cleared_config_path"))
+            self.path_buffer = ""
+            self.refresh()
+            self.screen = "setup" if self.needs_setup() else "main"
+            return
+        if key in (curses.KEY_BACKSPACE, 127, 8, "\b", "\x7f"):
+            self.path_buffer = self.path_buffer[:-1]
+            return
+        if isinstance(key, str) and key not in ("\n", "\r", "\t"):
+            self.path_buffer += key
 
     def run(self, stdscr: Any) -> None:
         curses.curs_set(0)
