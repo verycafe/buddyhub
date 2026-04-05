@@ -4,14 +4,23 @@
   "description": "Standalone TUI configurator for the official Claude Code Buddy.",
   "license": "AGPL-3.0-only",
   "bin": {
-    "buddyhub": "./buddyhub"
+    "buddyhub": "./buddyhub",
+    "buddyhub-ink-dev": "./ink/buddyhub-ink-dev.mjs"
+  },
+  "scripts": {
+    "ink:dev": "node ./ink/buddyhub-ink-dev.mjs"
   },
   "files": [
     "buddyhub",
     "buddyhub_tui.py",
-    "buddyhub_core.py"
+    "buddyhub_core.py",
+    "ink"
   ],
+  "dependencies": {
+    "ink": "^6.8.0",
+    "react": "^19.2.4"
+  },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   }
 }

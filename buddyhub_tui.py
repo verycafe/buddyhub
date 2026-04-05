@@ -1754,10 +1754,40 @@ def dump_language(language_id: str) -> int:
     return 0
 
 
+def dump_ui_model() -> int:
+    print(
+        json.dumps(
+            {
+                "languages": [
+                    {
+                        "language_id": language_id,
+                        "label": LANGUAGE_PRESETS[language_id]["label"],
+                    }
+                    for language_id in LANGUAGE_ORDER
+                ],
+                "colors": [
+                    {
+                        "color_id": color_id,
+                        "label": COLOR_PRESETS[color_id]["label"],
+                        "hex": COLOR_PRESETS[color_id]["hex"],
+                    }
+                    for color_id in ("green", "orange", "blue", "pink", "purple", "red", "black", "white")
+                    if color_id in COLOR_PRESETS
+                ],
+                "top_level_menu": list(TOP_LEVEL_MENU),
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="BuddyHub standalone TUI")
     parser.add_argument("--dump-language", choices=sorted(LANGUAGE_PACKS.keys()))
     parser.add_argument("--dump-state", action="store_true")
+    parser.add_argument("--dump-ui-model", action="store_true")
     return parser
 
 
@@ -1779,6 +1809,8 @@ def main() -> int:
             )
         )
         return 0
+    if args.dump_ui_model:
+        return dump_ui_model()
 
     app = BuddyHubTUI()
     curses.wrapper(app.run)

@@ -17,6 +17,7 @@ Use this folder for:
 
 - [claude-code-buddy.md](/Users/tvwoo/Projects/buddyhub/research/claude-code-buddy.md): current working notes for Claude Code Buddy attributes, UI, state handling, and related evidence
 - [claude-code-settings-and-buddy-customization.md](/Users/tvwoo/Projects/buddyhub/research/claude-code-settings-and-buddy-customization.md): settings architecture notes and implementation lessons for official Buddy nickname, color, and element customization
+- [ink-reference.md](/Users/tvwoo/Projects/buddyhub/research/ink-reference.md): official Ink repository notes, fit assessment, and migration guidance for replacing the current curses UI layer
 - [recon-reference.md](/Users/tvwoo/Projects/buddyhub/research/recon-reference.md): analysis of `gavraz/recon`, focused on mechanisms and patterns BuddyHub can learn from
 
 ## Suggested Conventions
@@ -33,6 +34,6 @@ Use this folder for:
 
 ## Directory Rule
 
-Product definition documents such as [PRD.md](/Users/tvwoo/Projects/buddyhub/PRD.md) stay in the repository root.
+Active product definition documents now live under [V0.2](/Users/tvwoo/Projects/buddyhub/V0.2).
 
 Exploratory and accumulating materials go into this `research/` folder.

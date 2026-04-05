@@ -64,9 +64,12 @@ TUI 启动后会先读取本机当前已安装 Buddy 的真实状态，并在右
 
 ## 文档
 
-- [PRD.md](/Users/tvwoo/Projects/buddyhub/PRD.md)
+- [V0.2/README.md](/Users/tvwoo/Projects/buddyhub/V0.2/README.md)
+- [V0.2/PRD.md](/Users/tvwoo/Projects/buddyhub/V0.2/PRD.md)
+- [V0.2/specs/README.md](/Users/tvwoo/Projects/buddyhub/V0.2/specs/README.md)
+- [V0.2/SPEC-STATUS.md](/Users/tvwoo/Projects/buddyhub/V0.2/SPEC-STATUS.md)
+- [V0.1/README.md](/Users/tvwoo/Projects/buddyhub/V0.1/README.md)
 - [TESTING.md](/Users/tvwoo/Projects/buddyhub/TESTING.md)
-- [specs/README.md](/Users/tvwoo/Projects/buddyhub/specs/README.md)
 - [research/README.md](/Users/tvwoo/Projects/buddyhub/research/README.md)
 
 ## 许可证

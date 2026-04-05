@@ -1,7 +1,7 @@
 # Buddy UI and Settings Spec
 
 - Status: Draft v0.5
-- Derived from: [PRD.md](/Users/tvwoo/Projects/buddyhub/PRD.md)
+- Derived from: [../PRD.md](/Users/tvwoo/Projects/buddyhub/V0.1/PRD.md)
 
 ## 1. Purpose
 

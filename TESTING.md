@@ -4,6 +4,11 @@
 - Date: 2026-04-05
 - Scope: standalone TUI for official Buddy customization
 
+Current product/source-of-truth docs live under:
+
+- [V0.2/PRD.md](/Users/tvwoo/Projects/buddyhub/V0.2/PRD.md)
+- [V0.2/specs/README.md](/Users/tvwoo/Projects/buddyhub/V0.2/specs/README.md)
+
 ## 1. Goal
 
 This document defines the real test path for BuddyHub's current phase.
