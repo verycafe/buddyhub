@@ -5,6 +5,9 @@ import argparse
 import curses
 import json
 import locale
+import shutil
+import sys
+from pathlib import Path
 from typing import Any
 
 from buddyhub_core import (
@@ -129,6 +132,13 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "detail_setup_retry": "Retry automatic detection after saving or adjusting paths.",
         "detail_setup_continue": "Continue into the main menu even if some detection is still missing.",
         "detail_path_input": "Type a filesystem path. Enter saves it. Esc cancels.",
+        "setup_reference_header": "Reference",
+        "setup_reference_binary": "Binary reference",
+        "setup_reference_config": "Config reference",
+        "setup_reference_launcher": "Launcher",
+        "setup_reference_resolved": "Resolved target",
+        "setup_reference_default_config": "Default config",
+        "setup_reference_command": "Hint",
         "result_apply_title": "Apply Result",
         "result_restore_title": "Restore Result",
         "result_uninstall_title": "Uninstall Result",
@@ -247,6 +257,13 @@ LANGUAGE_PACKS: dict[str, dict[str, str]] = {
         "detail_setup_retry": "保存或调整路径后，重新执行自动探测。",
         "detail_setup_continue": "即使还有缺失，也先进入主菜单。",
         "detail_path_input": "输入文件路径，回车保存，Esc 取消。",
+        "setup_reference_header": "参考",
+        "setup_reference_binary": "二进制参考",
+        "setup_reference_config": "配置参考",
+        "setup_reference_launcher": "启动器",
+        "setup_reference_resolved": "解析目标",
+        "setup_reference_default_config": "默认配置",
+        "setup_reference_command": "提示",
         "result_apply_title": "应用结果",
         "result_restore_title": "恢复结果",
         "result_uninstall_title": "卸载结果",
@@ -687,6 +704,41 @@ class BuddyHubTUI:
             ("quit", self.tr("setup_quit")),
         ]
 
+    def binary_reference_lines(self) -> list[str]:
+        lines: list[str] = []
+        launcher = shutil.which("claude")
+        if launcher:
+            lines.append(f"{self.tr('setup_reference_launcher')}: {launcher}")
+            try:
+                resolved = str(Path(launcher).resolve())
+            except OSError:
+                resolved = launcher
+            if resolved != launcher:
+                lines.append(f"{self.tr('setup_reference_resolved')}: {resolved}")
+        detection = self.inspection.get("detection") or {}
+        target_path = detection.get("target_path")
+        if target_path and not any(target_path in line for line in lines):
+            lines.append(f"{self.tr('setup_reference_binary')}: {target_path}")
+        if sys.platform == "win32":
+            lines.append(f"{self.tr('setup_reference_command')}: where claude")
+            lines.append(f"{self.tr('setup_reference_command')}: claude doctor")
+        else:
+            lines.append(f"{self.tr('setup_reference_command')}: which claude")
+            lines.append(f"{self.tr('setup_reference_command')}: claude doctor")
+        return lines
+
+    def config_reference_lines(self) -> list[str]:
+        lines: list[str] = []
+        companion = self.inspection.get("companion_config") or {}
+        current_path = companion.get("path")
+        if current_path:
+            lines.append(f"{self.tr('setup_reference_config')}: {current_path}")
+        default_path = str(Path.home() / ".claude.json")
+        if current_path != default_path:
+            lines.append(f"{self.tr('setup_reference_default_config')}: {default_path}")
+        lines.append(f"{self.tr('setup_reference_command')}: claude doctor")
+        return lines
+
     def build_draft_visual(self) -> dict[str, Any]:
         customization = self.inspection.get("customization") or {}
         effective_settings = self.inspection.get("effective_settings") or self.settings
@@ -880,6 +932,7 @@ class BuddyHubTUI:
                 reason = str(detection.get("reason") or "").strip()
                 if reason:
                     lines.append(f"{self.tr('setup_reason')}: {reason}"[:width])
+                lines.extend(line[:width] for line in self.binary_reference_lines()[:3])
                 return lines
             if item_id == "config":
                 lines = [self.tr("detail_setup")[:width]]
@@ -893,6 +946,7 @@ class BuddyHubTUI:
                 reason = str(companion.get("reason") or "").strip()
                 if reason:
                     lines.append(f"{self.tr('setup_reason')}: {reason}"[:width])
+                lines.extend(line[:width] for line in self.config_reference_lines()[:3])
                 return lines
             if item_id == "retry":
                 return [self.tr("detail_setup_retry")[:width]]
@@ -960,7 +1014,8 @@ class BuddyHubTUI:
         if self.screen == "nickname":
             return [self.tr("detail_nickname_hint")[:width]]
         if self.screen in {"setup_binary_input", "setup_config_input"}:
-            return [self.tr("detail_path_input")[:width]]
+            references = self.binary_reference_lines() if self.screen == "setup_binary_input" else self.config_reference_lines()
+            return [self.tr("detail_path_input")[:width], *[line[:width] for line in references[:3]]]
         return []
 
     def show_result(

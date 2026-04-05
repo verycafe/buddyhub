@@ -66,6 +66,10 @@ Verify:
   - `Quit`
 - saving a valid binary path and config path allows BuddyHub to re-run detection
 - the saved override paths are reused on the next launch
+- the setup detail panel shows path-finding references such as:
+  - `which claude` on macOS/Linux
+  - `where claude` on Windows
+  - `claude doctor` as an additional hint
 
 ## 5. System-Language Default Test
 
@@ -76,7 +80,17 @@ On first launch with no saved BuddyHub settings, verify:
 - generic shell locales such as `C`, `C.UTF-8`, or `POSIX` do not override a real language setting from `LANG`
 - after the first launch, an explicitly saved language still wins over automatic detection
 
-## 6. Safe Test Order
+## 6. Automatic Detection Test
+
+Verify automatic detection prefers the installed Claude launcher before falling back to manual setup.
+
+Verify:
+
+- if `claude` is on `PATH` and resolves to a versioned Claude binary, BuddyHub detects it automatically
+- on macOS/Linux, BuddyHub also checks standard Claude versions roots if launcher resolution alone is insufficient
+- BuddyHub only enters `Setup` after automatic detection has actually failed
+
+## 7. Safe Test Order
 
 The required order is:
 
@@ -93,7 +107,7 @@ The required order is:
 11. verify the standalone TUI result card appears for apply and restore
 12. verify `Uninstall` restores, removes old plugin traces, and exits automatically
 
-## 7. Installed-State Detection Test
+## 8. Installed-State Detection Test
 
 Before interacting with the menu, verify BuddyHub can read the real installed Buddy:
 
@@ -110,7 +124,7 @@ Verify:
 - `draft_visual` starts from the installed state and only adds saved draft changes
 - if the Buddy has no installed element, `draft_visual.element_id` stays `null` and does not silently fall back to `tophat`
 
-## 8. Language Menu Test
+## 9. Language Menu Test
 
 Launch the TUI and enter the `Language` menu.
 
@@ -137,7 +151,7 @@ Validated language IDs:
 - `fr`
 - `ru`
 
-## 9. Color Menu Test
+## 10. Color Menu Test
 
 Enter the `Color` menu.
 
@@ -174,7 +188,7 @@ When `white` is selected, verify:
 - the saved color does not change silently
 - the status message clearly indicates that the color is unavailable
 
-## 10. Nickname Test
+## 11. Nickname Test
 
 Enter the `Nickname` screen.
 
@@ -186,7 +200,7 @@ Verify:
 - the installed preview remains unchanged until apply
 - clearing the nickname returns the draft preview to the installed Buddy name
 
-## 11. Apply Test
+## 12. Apply Test
 
 After selecting a verified color or nickname:
 
@@ -203,7 +217,7 @@ Verify:
 - the Buddy color matches the saved verified preset
 - the `/buddy` companion card shows the same name and color source after restart
 
-## 12. Restore Test
+## 13. Restore Test
 
 From the standalone TUI, choose `Restore`.
 
@@ -221,7 +235,7 @@ Verify:
 - the original binary patch state is restored
 - the `/buddy` companion card returns to the original name/color source as well
 
-## 13. Uninstall Test
+## 14. Uninstall Test
 
 From the standalone TUI, choose `Uninstall`.
 
@@ -233,36 +247,36 @@ Verify:
 - BuddyHub exits on its own without asking the user to run a separate uninstall command
 - if BuddyHub was installed through a package manager, the background uninstall job is scheduled automatically
 
-## 14. Failure Tests
+## 15. Failure Tests
 
-### 14.1 Unsupported color
+### 15.1 Unsupported color
 
 Verify:
 
 - selecting `white` does not silently become active
 - BuddyHub reports the color as unavailable
 
-### 14.2 Apply on already-matching state
+### 15.2 Apply on already-matching state
 
 Verify:
 
 - if the current installed Buddy already matches the saved draft, apply succeeds cleanly
 - BuddyHub does not require a stale local patch record to recognize the installed state
 
-### 12.3 Restore when nothing is patched
+### 15.3 Restore when nothing is patched
 
 Verify:
 
 - BuddyHub fails safely or reports a clean no-op
 - no unrelated files are modified
 
-### 12.4 Nickname restore
+### 15.4 Nickname restore
 
 Verify:
 
 - restore returns the displayed name to the value stored in `/Users/tvwoo/.claude.json` before customization
 
-## 12. Current Out Of Scope
+## 16. Current Out Of Scope
 
 Do not treat these as blockers for this phase:
 
@@ -271,7 +285,7 @@ Do not treat these as blockers for this phase:
 - runtime state tracking
 - status line
 
-## 13. Acceptance Criteria
+## 17. Acceptance Criteria
 
 This phase is complete when:
 

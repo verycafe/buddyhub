@@ -651,6 +651,130 @@ def detect_system_language_id() -> str:
     return "en"
 
 
+def version_from_target_path(path: Path) -> str | None:
+    direct = parse_semver(path.name)
+    if direct is not None:
+        return path.name
+    stem = parse_semver(path.stem)
+    if stem is not None:
+        return path.stem
+    parent = parse_semver(path.parent.name)
+    if parent is not None:
+        return path.parent.name
+    return None
+
+
+def candidate_versions_roots() -> list[tuple[str, Path]]:
+    roots: list[tuple[str, Path]] = []
+    xdg_data_home = os.environ.get("XDG_DATA_HOME")
+    if xdg_data_home:
+        roots.append(("xdg-versions-dir", Path(xdg_data_home).expanduser() / "claude" / "versions"))
+    roots.append(("home-local-share-versions", CLAUDE_VERSIONS_ROOT))
+    return roots
+
+
+def versioned_binaries_in_root(root: Path) -> list[tuple[tuple[int, int, int], Path, str]]:
+    candidates: list[tuple[tuple[int, int, int], Path, str]] = []
+    if not root.exists() or not root.is_dir():
+        return candidates
+    for path in root.iterdir():
+        if path.is_file():
+            version = version_from_target_path(path)
+            semver = parse_semver(version) if version else None
+            if semver is not None:
+                candidates.append((semver, path, version))
+            continue
+        if not path.is_dir():
+            continue
+        semver = parse_semver(path.name)
+        if semver is None:
+            continue
+        for binary_name in ("claude", "claude.exe"):
+            candidate = path / binary_name
+            if candidate.exists() and candidate.is_file():
+                candidates.append((semver, candidate, path.name))
+                break
+    return candidates
+
+
+def detect_target_from_binary_path(
+    candidate: Path,
+    *,
+    detection_mode: str,
+    install_root: str | None = None,
+) -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "platform": sys.platform,
+        "target_detected": False,
+        "target_path": None,
+        "target_version": None,
+        "target_sha1": None,
+        "install_root": install_root,
+        "detection_mode": detection_mode,
+        "profile_supported": False,
+        "profile_id": None,
+        "profile_description": None,
+        "profile_species": None,
+        "reason": None,
+    }
+    if not candidate.exists() or not candidate.is_file():
+        result["reason"] = "Configured Claude binary path does not point to a readable file."
+        return result
+    version = version_from_target_path(candidate)
+    if not version:
+        result["reason"] = "Detected Claude binary path does not expose a versioned target that BuddyHub can patch."
+        return result
+    profiles = profiles_for_version(version)
+    default_profile = profiles[0] if profiles else None
+    result.update(
+        {
+            "target_detected": True,
+            "target_path": str(candidate),
+            "target_version": version,
+            "target_sha1": sha1_file(candidate),
+            "profile_supported": bool(default_profile),
+            "profile_id": default_profile.get("profile_id") if default_profile else None,
+            "profile_description": default_profile.get("description") if default_profile else None,
+            "profile_species": default_profile.get("species") if default_profile else None,
+            "reason": None if default_profile else "No supported patch profile for this binary version.",
+        }
+    )
+    return result
+
+
+def detect_target_from_launcher() -> dict[str, Any] | None:
+    command_names = ["claude"]
+    if sys.platform == "win32":
+        command_names.append("claude.exe")
+    seen: set[str] = set()
+    for command_name in command_names:
+        launcher = shutil.which(command_name)
+        if not launcher:
+            continue
+        launcher_path = Path(launcher).expanduser()
+        candidates = [launcher_path]
+        try:
+            resolved = launcher_path.resolve()
+        except OSError:
+            resolved = launcher_path
+        if resolved != launcher_path:
+            candidates.insert(0, resolved)
+        for candidate in candidates:
+            candidate_key = str(candidate)
+            if candidate_key in seen:
+                continue
+            seen.add(candidate_key)
+            version = version_from_target_path(candidate)
+            if not version:
+                continue
+            return detect_target_from_binary_path(
+                candidate,
+                detection_mode="launcher-resolve",
+                install_root=str(candidate.parent),
+            )
+    return None
+
+
 def sanitize_customization_settings(raw: dict[str, Any] | None) -> dict[str, Any]:
     settings = default_customization_settings()
     if raw:
@@ -1191,74 +1315,56 @@ def detect_native_target(settings: dict[str, Any] | None = None) -> dict[str, An
 
     if override or configured:
         candidate = Path(override or configured).expanduser()
-        result["detection_mode"] = "env" if override else "settings"
-        if candidate.exists() and candidate.is_file():
-            version = candidate.name
-            profiles = profiles_for_version(version)
-            default_profile = profiles[0] if profiles else None
-            result.update(
-                {
-                    "target_detected": True,
-                    "target_path": str(candidate),
-                    "target_version": version,
-                    "target_sha1": sha1_file(candidate),
-                    "profile_supported": bool(default_profile),
-                    "profile_id": default_profile.get("profile_id") if default_profile else None,
-                    "profile_description": default_profile.get("description") if default_profile else None,
-                    "profile_species": default_profile.get("species") if default_profile else None,
-                    "reason": None if default_profile else "No supported patch profile for this binary version.",
-                }
-            )
-            return result
-        result["reason"] = (
-            "Configured Claude binary path does not point to a readable file."
-            if configured and not override
-            else "BUDDYHUB_CLAUDE_BINARY does not point to a readable file."
+        detected = detect_target_from_binary_path(
+            candidate,
+            detection_mode="env" if override else "settings",
+            install_root=str(candidate.parent),
         )
-        return result
+        if not detected.get("target_detected"):
+            detected["reason"] = (
+                "Configured Claude binary path does not point to a readable versioned Claude binary."
+                if configured and not override
+                else "BUDDYHUB_CLAUDE_BINARY does not point to a readable versioned Claude binary."
+            )
+        return detected
 
-    if sys.platform != "darwin":
-        result["reason"] = "Automatic native-target detection is currently validated only on macOS. Use Setup to enter the Claude binary path on this platform."
-        return result
+    launcher_detection = detect_target_from_launcher()
+    if launcher_detection:
+        return launcher_detection
 
-    result["install_root"] = str(CLAUDE_VERSIONS_ROOT)
-    result["detection_mode"] = "macos-versions-dir"
-
-    if not CLAUDE_VERSIONS_ROOT.exists():
-        result["reason"] = "Claude versions directory does not exist on this machine."
-        return result
-
-    candidates: list[tuple[tuple[int, int, int], Path]] = []
-    for path in CLAUDE_VERSIONS_ROOT.iterdir():
-        if not path.is_file():
+    root_candidates = candidate_versions_roots()
+    for detection_mode, root in root_candidates:
+        candidates = versioned_binaries_in_root(root)
+        if not candidates:
             continue
-        semver = parse_semver(path.name)
-        if semver is None:
-            continue
-        candidates.append((semver, path))
+        candidates.sort(key=lambda item: item[0], reverse=True)
+        _, target, _ = candidates[0]
+        return detect_target_from_binary_path(
+            target,
+            detection_mode=detection_mode,
+            install_root=str(root),
+        )
 
-    if not candidates:
-        result["reason"] = "No versioned Claude executable was found in the versions directory."
+    if sys.platform == "darwin":
+        result["install_root"] = str(CLAUDE_VERSIONS_ROOT)
+        result["detection_mode"] = "macos-versions-dir"
+        if not CLAUDE_VERSIONS_ROOT.exists():
+            result["reason"] = "BuddyHub could not find the Claude versions directory. Try Setup and use `which claude` to locate the installed launcher target."
+        else:
+            result["reason"] = "No versioned Claude executable was found automatically. Try Setup and use `which claude` to locate the installed launcher target."
         return result
 
-    candidates.sort(key=lambda item: item[0], reverse=True)
-    _, target = candidates[0]
-    version = target.name
-    profiles = profiles_for_version(version)
-    default_profile = profiles[0] if profiles else None
-    result.update(
-        {
-            "target_detected": True,
-            "target_path": str(target),
-            "target_version": version,
-            "target_sha1": sha1_file(target),
-            "profile_supported": bool(default_profile),
-            "profile_id": default_profile.get("profile_id") if default_profile else None,
-            "profile_description": default_profile.get("description") if default_profile else None,
-            "profile_species": default_profile.get("species") if default_profile else None,
-            "reason": None if default_profile else "No supported patch profile for the detected Claude version.",
-        }
-    )
+    if sys.platform.startswith("linux"):
+        result["detection_mode"] = "linux-launcher-or-versions"
+        result["reason"] = "BuddyHub could not resolve the installed Claude binary automatically on this Linux machine. Try Setup and use `which claude` or `claude doctor` as a reference."
+        return result
+
+    if sys.platform == "win32":
+        result["detection_mode"] = "windows-launcher"
+        result["reason"] = "BuddyHub could not resolve the installed Claude binary automatically on this Windows machine. Try Setup and use `where claude` or `claude doctor` as a reference."
+        return result
+
+    result["reason"] = "BuddyHub could not resolve the installed Claude binary automatically on this platform. Use Setup to enter the Claude binary path."
     return result
 
 

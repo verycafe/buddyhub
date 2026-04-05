@@ -24,12 +24,19 @@ On first launch, BuddyHub uses the system locale for the menu language when it c
 
 ## Platform Detection
 
-- macOS: automatic Claude Code binary detection is the validated path right now
-- Linux and Windows: if auto-detection is incomplete, BuddyHub opens `Setup` first and guides the user to enter:
+- BuddyHub first tries to detect Claude automatically by resolving the installed `claude` launcher on `PATH`
+- On macOS and Linux, BuddyHub also scans the standard Claude versions directory when available
+- If auto-detection is still incomplete, BuddyHub opens `Setup` and guides the user to enter:
   - the Claude executable path
   - the Claude config path
 
 BuddyHub keeps those override paths in its own settings and reuses them on later launches.
+
+Setup also shows path-finding hints such as:
+
+- `which claude` on macOS/Linux
+- `where claude` on Windows
+- `claude doctor` as an extra reference
 
 ## Menu
 

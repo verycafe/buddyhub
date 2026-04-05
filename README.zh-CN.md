@@ -24,12 +24,19 @@ buddyhub
 
 ## 平台探测
 
-- macOS：当前已经验证的自动探测路径
-- Linux 和 Windows：如果自动探测不完整，BuddyHub 会先进入 `Setup`，引导用户手动填写：
+- BuddyHub 会先尝试通过 `PATH` 上的 `claude` 启动器自动识别 Claude
+- 在 macOS 和 Linux 上，如果存在标准版本目录，BuddyHub 也会继续扫描版本目录
+- 如果自动探测仍然不完整，BuddyHub 会先进入 `Setup`，引导用户手动填写：
   - Claude 可执行文件路径
   - Claude 配置文件路径
 
 这些覆盖路径会保存在 BuddyHub 自己的设置里，后续启动会继续复用。
+
+`Setup` 里也会直接给出参考提示，例如：
+
+- macOS/Linux：`which claude`
+- Windows：`where claude`
+- 额外参考：`claude doctor`
 
 ## 菜单
 
