@@ -109,6 +109,8 @@ brew tap verycafe/buddyhub https://github.com/verycafe/buddyhub
 brew install verycafe/buddyhub/buddyhub
 ```
 
+If Homebrew reports outdated Command Line Tools on macOS, update them first and then rerun the install.
+
 Then run:
 
 ```bash
