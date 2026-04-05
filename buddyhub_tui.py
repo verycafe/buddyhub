@@ -635,6 +635,8 @@ class BuddyHubTUI:
         self.path_buffer = ""
         self.cursor_position: tuple[int, int] | None = None
         self.running = True
+        self.color_pair_ids: dict[str, int] = {}
+        self.color_extra_attrs: dict[str, int] = {}
         self.settings = load_customization_settings()
         self.lang = str(self.settings.get("language_id") or "en")
         self.inspection = inspect_native_patch()
@@ -1006,6 +1008,9 @@ class BuddyHubTUI:
             curses.use_default_colors()
         except curses.error:
             pass
+        self.color_pair_ids = {}
+        self.color_extra_attrs = {}
+        available_colors = max(0, getattr(curses, "COLORS", 0))
         mapping = {
             "green": curses.COLOR_GREEN,
             "orange": curses.COLOR_YELLOW,
@@ -1016,33 +1021,60 @@ class BuddyHubTUI:
             "black": curses.COLOR_BLACK,
             "white": curses.COLOR_WHITE,
         }
+        if available_colors >= 256:
+            mapping.update(
+                {
+                    "green": 78,
+                    "orange": 214,
+                    "blue": 75,
+                    "pink": 218,
+                    "purple": 165,
+                    "red": 196,
+                    "black": 16,
+                    "white": 231,
+                }
+            )
+        custom_rgb = {
+            "orange": (1000, 675, 110),
+            "blue": (360, 660, 1000),
+            "pink": (1000, 588, 788),
+            "purple": (808, 110, 1000),
+            "red": (1000, 4, 4),
+        }
+        custom_color_slots: dict[str, int] = {}
+        if curses.can_change_color():
+            try:
+                next_slot = max(16, available_colors - len(custom_rgb))
+                if available_colors > next_slot + len(custom_rgb):
+                    for color_id, (red, green, blue) in custom_rgb.items():
+                        slot = next_slot
+                        curses.init_color(slot, red, green, blue)
+                        custom_color_slots[color_id] = slot
+                        next_slot += 1
+            except curses.error:
+                custom_color_slots = {}
         pair_id = 1
         for color_id, color_value in mapping.items():
             try:
+                if color_id in custom_color_slots:
+                    color_value = custom_color_slots[color_id]
                 curses.init_pair(pair_id, color_value, -1)
             except curses.error:
                 continue
+            self.color_pair_ids[color_id] = pair_id
+            if color_id == "pink":
+                self.color_extra_attrs[color_id] = curses.A_BOLD
             pair_id += 1
         self.color_pairs_ready = True
 
     def color_attr(self, color_id: str | None) -> int:
         if not curses.has_colors():
             return 0
-        mapping = {
-            "green": 1,
-            "orange": 2,
-            "blue": 3,
-            "pink": 4,
-            "purple": 5,
-            "red": 6,
-            "black": 7,
-            "white": 8,
-        }
-        pair_id = mapping.get(color_id)
+        pair_id = self.color_pair_ids.get(color_id or "")
         if not pair_id:
             return 0
         try:
-            return curses.color_pair(pair_id)
+            return curses.color_pair(pair_id) | self.color_extra_attrs.get(color_id or "", 0)
         except curses.error:
             return 0
 

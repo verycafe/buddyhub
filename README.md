@@ -50,9 +50,7 @@ Current top-level menu:
 - `Quit`
 
 Current scope:
-- element switching is hidden in this phase
-- BuddyHub keeps the currently installed element as-is, or keeps `none` if no element is installed
-- this phase only exposes `Color` and `Nickname` as user-editable draft settings
+- this phase only exposes `Color` and `Nickname` as user-editable settings
 
 The TUI reads the current installed Buddy first and shows a live preview panel on the right side.
 

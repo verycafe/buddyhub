@@ -76,14 +76,14 @@ ELEMENT_CATALOG: dict[str, dict[str, Any]] = {
 }
 
 COLOR_PRESETS: dict[str, dict[str, Any]] = {
-    "orange": {"color_id": "orange", "label": "Orange", "hex": "#f28c28"},
-    "pink": {"color_id": "pink", "label": "Pink", "hex": "#ff74b8"},
+    "orange": {"color_id": "orange", "label": "Orange", "hex": "#ffac1c"},
+    "pink": {"color_id": "pink", "label": "Pink", "hex": "#ff96c9"},
     "blue": {"color_id": "blue", "label": "Blue", "hex": "#5aa7ff"},
     "green": {"color_id": "green", "label": "Green", "hex": "#4ecb71"},
-    "red": {"color_id": "red", "label": "Red", "hex": "#ff5b5b"},
+    "red": {"color_id": "red", "label": "Red", "hex": "#ff0101"},
     "black": {"color_id": "black", "label": "Black", "hex": "#111111"},
     "white": {"color_id": "white", "label": "White", "hex": "#f5f5f5"},
-    "purple": {"color_id": "purple", "label": "Purple", "hex": "#9a67ff"},
+    "purple": {"color_id": "purple", "label": "Purple", "hex": "#ce1cff"},
 }
 
 LANGUAGE_PRESETS: dict[str, dict[str, str]] = {
@@ -107,11 +107,11 @@ COLOR_PATCH_PRESETS: dict[str, dict[str, dict[str, Any]]] = {
         "orange": {
             "color_id": "orange",
             "label": "Orange",
-            "description": "Remap the current uncommon Buddy accent token from green to orange/yellow.",
+            "description": "Retint the active success RGB token to the verified orange accent on the current target.",
             "replacements": [
                 {
-                    "old": b'uncommon:"success"',
-                    "new": b'uncommon:"warning"',
+                    "old": b'success:"rgb(78,186,101)"',
+                    "new": b'success:"rgb(255,172,028)"',
                     "expected_matches": 2,
                 }
             ],
@@ -135,7 +135,7 @@ COLOR_PATCH_PRESETS: dict[str, dict[str, dict[str, Any]]] = {
             "replacements": [
                 {
                     "old": b'success:"rgb(78,186,101)"',
-                    "new": b'success:"rgb(255,80,120)"',
+                    "new": b'success:"rgb(255,150,201)"',
                     "expected_matches": 2,
                 }
             ],
@@ -147,7 +147,7 @@ COLOR_PATCH_PRESETS: dict[str, dict[str, dict[str, Any]]] = {
             "replacements": [
                 {
                     "old": b'success:"rgb(78,186,101)"',
-                    "new": b'success:"rgb(180,80,255)"',
+                    "new": b'success:"rgb(206,028,255)"',
                     "expected_matches": 2,
                 }
             ],
@@ -159,7 +159,7 @@ COLOR_PATCH_PRESETS: dict[str, dict[str, dict[str, Any]]] = {
             "replacements": [
                 {
                     "old": b'success:"rgb(78,186,101)"',
-                    "new": b'success:"rgb(255,060,60)"',
+                    "new": b'success:"rgb(255,001,001)"',
                     "expected_matches": 2,
                 }
             ],
